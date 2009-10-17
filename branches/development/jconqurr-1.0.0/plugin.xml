@@ -5,7 +5,7 @@
    <extension
          point="org.eclipse.ui.popupMenus">
       <objectContribution
-            objectClass="org.eclipse.core.resources.IFile"
+            objectClass="org.eclipse.core.resources.IProject"
             id="org.eclipse.jconqurr.ui.contribution1">
          <menu
                label="Jconqurr"
