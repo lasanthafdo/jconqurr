@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         point="org.eclipse.ui.popupMenus">
+      <objectContribution
+            objectClass="org.eclipse.core.resources.IProject"
+            id="org.eclipse.jconqurr.ui.contribution1">
+         <menu
+               label="Jconqurr"
+               path="additions"
+               id="org.eclipse.jconqurr.ui.menu1">
+            <separator
+                  name="group1">
+            </separator>
+         </menu>
+         <action
+               label="Build"
+               class="org.eclipse.jconqurr.ui.popup.actions.CreateProjectAction"
+               menubarPath="org.eclipse.jconqurr.ui.menu1/group1"
+               enablesFor="1"
+               id="org.eclipse.jconqurr.ui.newAction">
+         </action>
+      </objectContribution>
+   </extension>
+
+</plugin>
