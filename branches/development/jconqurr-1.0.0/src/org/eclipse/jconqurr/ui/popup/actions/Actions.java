@@ -20,10 +20,15 @@ import org.eclipse.jdt.launching.JavaRuntime;
 import org.eclipse.jdt.launching.LibraryLocation;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.IObjectActionDelegate;
 import org.eclipse.ui.IWorkbenchPart;
+import org.eclipse.ui.IWorkbenchWindow;
+import org.eclipse.ui.PlatformUI;
 
 public class Actions implements IObjectActionDelegate {
+
+	private IStructuredSelection selection;
 
 	/**
 	 * Constructor for Action1.
@@ -36,23 +41,29 @@ public class Actions implements IObjectActionDelegate {
 	 * @see IObjectActionDelegate#setActivePart(IAction, IWorkbenchPart)
 	 */
 	public void setActivePart(IAction action, IWorkbenchPart targetPart) {
-		 
+
 	}
 
 	/**
 	 * @see IActionDelegate#run(IAction)
 	 */
 	public void run(IAction action) {
-		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-		IProject project = root.getProject("NewProject");
-		IProject[] projects = root.getProjects();
-
-		for (IProject p : projects) {
-			if (!(p.getName().equals("NewProject"))) {
-				System.out.println("Working in project " + project.getName());
+		IWorkbenchWindow window = PlatformUI.getWorkbench()
+				.getActiveWorkbenchWindow();
+		ISelection selection = window.getSelectionService().getSelection();
+		if (selection instanceof IStructuredSelection) {
+			Actions.this.selection = (IStructuredSelection) selection;
+			Object firstElement = Actions.this.selection.getFirstElement();
+			if (firstElement instanceof IProject) {
+				IProject selectedProject = (IProject) firstElement;
+				Actions.this.creatProject(selectedProject);
 			}
 		}
+	}
 
+	public void creatProject(IProject selectedProject) {
+		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
+		IProject project = root.getProject("Jconq" + selectedProject.getName());
 		try {
 			project.create(null);
 			project.open(null);
@@ -101,6 +112,7 @@ public class Actions implements IObjectActionDelegate {
 	 * @see IActionDelegate#selectionChanged(IAction, ISelection)
 	 */
 	public void selectionChanged(IAction action, ISelection selection) {
+
 	}
 
 }
