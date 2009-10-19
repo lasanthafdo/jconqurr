@@ -1,4 +1,4 @@
-package org.eclipse.jconqurr.ui.popup.actions;
+package org.eclipse.jconqurr.internal.ui.actions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,43 +21,43 @@ import org.eclipse.jdt.launching.LibraryLocation;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.ui.IObjectActionDelegate;
-import org.eclipse.ui.IWorkbenchPart;
-import org.eclipse.ui.IWorkbenchWindow;
-import org.eclipse.ui.PlatformUI;
+import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.ui.actions.ActionDelegate;
 
-public class Actions implements IObjectActionDelegate {
+public class ManualParallelizationAction extends ActionDelegate {
 
-	private IStructuredSelection selection;
+	private IStructuredSelection selection = StructuredSelection.EMPTY;
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.eclipse.ui.actions.ActionDelegate#selectionChanged(org.eclipse.jface
+	 * .action.IAction, org.eclipse.jface.viewers.ISelection)
+	 */
+	public void selectionChanged(IAction action, ISelection sel) {
+		System.out.println("Selection Changed called");
+		if (sel instanceof IStructuredSelection)
+			selection = (IStructuredSelection) sel;
+		else
+			selection = StructuredSelection.EMPTY;
+	}
 
 	/**
 	 * Constructor for Action1.
 	 */
-	public Actions() {
+	public ManualParallelizationAction() {
 		super();
-	}
-
-	/**
-	 * @see IObjectActionDelegate#setActivePart(IAction, IWorkbenchPart)
-	 */
-	public void setActivePart(IAction action, IWorkbenchPart targetPart) {
-
 	}
 
 	/**
 	 * @see IActionDelegate#run(IAction)
 	 */
 	public void run(IAction action) {
-		IWorkbenchWindow window = PlatformUI.getWorkbench()
-				.getActiveWorkbenchWindow();
-		ISelection selection = window.getSelectionService().getSelection();
-		if (selection instanceof IStructuredSelection) {
-			Actions.this.selection = (IStructuredSelection) selection;
-			Object firstElement = Actions.this.selection.getFirstElement();
-			if (firstElement instanceof IProject) {
-				IProject selectedProject = (IProject) firstElement;
-				Actions.this.creatProject(selectedProject);
-			}
+		Object firstElement = selection.getFirstElement();
+		if (firstElement instanceof IProject) {
+			IProject selectedProject = (IProject) firstElement;
+			ManualParallelizationAction.this.creatProject(selectedProject);
 		}
 	}
 
@@ -106,13 +106,6 @@ public class Actions implements IObjectActionDelegate {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}
-
-	/**
-	 * @see IActionDelegate#selectionChanged(IAction, ISelection)
-	 */
-	public void selectionChanged(IAction action, ISelection selection) {
-
 	}
 
 }
