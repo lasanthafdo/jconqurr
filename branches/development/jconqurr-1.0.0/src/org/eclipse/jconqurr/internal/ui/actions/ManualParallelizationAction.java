@@ -36,7 +36,6 @@ public class ManualParallelizationAction extends ActionDelegate {
 	 * .action.IAction, org.eclipse.jface.viewers.ISelection)
 	 */
 	public void selectionChanged(IAction action, ISelection sel) {
-		System.out.println("Selection Changed called");
 		if (sel instanceof IStructuredSelection)
 			selection = (IStructuredSelection) sel;
 		else
@@ -64,48 +63,50 @@ public class ManualParallelizationAction extends ActionDelegate {
 	public void creatProject(IProject selectedProject) {
 		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
 		IProject project = root.getProject("Jconq" + selectedProject.getName());
-		try {
-			project.create(null);
-			project.open(null);
-			IProjectDescription description = project.getDescription();
-			description.setNatureIds(new String[] { JavaCore.NATURE_ID });
-			project.setDescription(description, null);
-			IJavaProject javaProject = JavaCore.create(project);
-			IFolder binFolder = project.getFolder("bin");
-			binFolder.create(false, true, null);
-			List<IClasspathEntry> entries = new ArrayList<IClasspathEntry>();
-			IVMInstall vmInstall = JavaRuntime.getDefaultVMInstall();
-			LibraryLocation[] locations = JavaRuntime
-					.getLibraryLocations(vmInstall);
+		if (!project.exists()) {
+			try {
+				project.create(null);
+				project.open(null);
+				IProjectDescription description = project.getDescription();
+				description.setNatureIds(new String[] { JavaCore.NATURE_ID });
+				project.setDescription(description, null);
+				IJavaProject javaProject = JavaCore.create(project);
+				IFolder binFolder = project.getFolder("bin");
+				binFolder.create(false, true, null);
+				List<IClasspathEntry> entries = new ArrayList<IClasspathEntry>();
+				IVMInstall vmInstall = JavaRuntime.getDefaultVMInstall();
+				LibraryLocation[] locations = JavaRuntime
+						.getLibraryLocations(vmInstall);
 
-			for (LibraryLocation element : locations) {
-				entries.add(JavaCore.newLibraryEntry(element
-						.getSystemLibraryPath(), null, null));
+				for (LibraryLocation element : locations) {
+					entries.add(JavaCore.newLibraryEntry(element
+							.getSystemLibraryPath(), null, null));
+				}
+				// add libs to project class path
+				javaProject.setRawClasspath(entries
+						.toArray(new IClasspathEntry[entries.size()]), null);
+				IFolder sourceFolder = project.getFolder("src");
+				sourceFolder.create(true, true, null);
+				IPackageFragmentRoot src = javaProject
+						.getPackageFragmentRoot(sourceFolder);
+				IClasspathEntry[] oldEntries = javaProject.getRawClasspath();
+				IClasspathEntry[] newEntries = new IClasspathEntry[oldEntries.length + 1];
+				System.arraycopy(oldEntries, 0, newEntries, 0,
+						oldEntries.length);
+				newEntries[oldEntries.length] = JavaCore.newSourceEntry(src
+						.getPath());
+				javaProject.setRawClasspath(newEntries, javaProject
+						.getOutputLocation(), null);
+				IPackageFragment pack = src.createPackageFragment("x.y", true,
+						null);
+				String str = "package x.y;" + "\n" + "public class E{" + "\n"
+						+ "String first;" + "\n" + "}";
+				ICompilationUnit cu = pack.createCompilationUnit("E.java", str,
+						false, null);
+			} catch (CoreException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-			// add libs to project class path
-			javaProject.setRawClasspath(entries
-					.toArray(new IClasspathEntry[entries.size()]), null);
-			IFolder sourceFolder = project.getFolder("src");
-			sourceFolder.create(true, true, null);
-			IPackageFragmentRoot src = javaProject
-					.getPackageFragmentRoot(sourceFolder);
-			IClasspathEntry[] oldEntries = javaProject.getRawClasspath();
-			IClasspathEntry[] newEntries = new IClasspathEntry[oldEntries.length + 1];
-			System.arraycopy(oldEntries, 0, newEntries, 0, oldEntries.length);
-			newEntries[oldEntries.length] = JavaCore.newSourceEntry(src
-					.getPath());
-			javaProject.setRawClasspath(newEntries, javaProject
-					.getOutputLocation(), null);
-			IPackageFragment pack = src
-					.createPackageFragment("x.y", true, null);
-			String str = "package x.y;" + "\n" + "public class E{" + "\n"
-					+ "String first;" + "\n" + "}";
-			ICompilationUnit cu = pack.createCompilationUnit("E.java", str,
-					false, null);
-		} catch (CoreException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 	}
-
 }
