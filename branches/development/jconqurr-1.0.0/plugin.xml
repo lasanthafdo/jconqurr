@@ -17,7 +17,7 @@
          </menu>
          <action
                label="Build Project"
-               class="org.eclipse.jconqurr.ui.popup.actions.Actions"
+               class="org.eclipse.jconqurr.internal.ui.actions.ManualParallelizationAction"
                menubarPath="org.eclipse.jconqurr.ui.menu1/group1"
                enablesFor="1"
                id="org.eclipse.jconqurr.ui.newAction">
