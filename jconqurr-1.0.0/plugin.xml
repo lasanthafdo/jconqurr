@@ -16,13 +16,41 @@
             </separator>
          </menu>
          <action
-               label="Build Project"
-               class="org.eclipse.jconqurr.internal.ui.actions.ManualParallelizationAction"
+               label="Build Parallel Project"
+               class="org.eclipse.jconqurr.internal.ui.actions.ConvertParallelAction"
                menubarPath="org.eclipse.jconqurr.ui.menu1/group1"
                enablesFor="1"
                id="org.eclipse.jconqurr.ui.newAction">
          </action>
       </objectContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
+         <menu
+               label="Jconqurr">
+            <command
+                  commandId="org.eclipse.jconqurr.ui.actions.convertparallel"
+                  label="Build Parallel Project"
+                  style="push">
+            </command>
+         </menu>
+      </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <command
+            id="org.eclipse.jconqurr.ui.actions.convertparallel"
+            name="Convert Parallel">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="org.eclipse.jconqurr.internal.ui.commands.ConvertParallelCommand"
+            commandId="org.eclipse.jconqurr.ui.actions.convertparallel">
+      </handler>
    </extension>
 
 </plugin>

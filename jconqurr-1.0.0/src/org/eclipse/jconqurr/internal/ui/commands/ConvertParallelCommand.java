@@ -1,8 +1,11 @@
-package org.eclipse.jconqurr.internal.ui.actions;
+package org.eclipse.jconqurr.internal.ui.commands;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.core.commands.AbstractHandler;
+import org.eclipse.core.commands.ExecutionEvent;
+import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IProjectDescription;
@@ -18,51 +21,28 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.launching.IVMInstall;
 import org.eclipse.jdt.launching.JavaRuntime;
 import org.eclipse.jdt.launching.LibraryLocation;
-import org.eclipse.jface.action.IAction;
-import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.StructuredSelection;
-import org.eclipse.ui.actions.ActionDelegate;
+import org.eclipse.ui.handlers.HandlerUtil;
 
-public class ManualParallelizationAction extends ActionDelegate {
+public class ConvertParallelCommand extends AbstractHandler {
 
-	private IStructuredSelection selection = StructuredSelection.EMPTY;
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.eclipse.ui.actions.ActionDelegate#selectionChanged(org.eclipse.jface
-	 * .action.IAction, org.eclipse.jface.viewers.ISelection)
-	 */
-	public void selectionChanged(IAction action, ISelection sel) {
-		if (sel instanceof IStructuredSelection)
-			selection = (IStructuredSelection) sel;
-		else
-			selection = StructuredSelection.EMPTY;
-	}
-
-	/**
-	 * Constructor for Action1.
-	 */
-	public ManualParallelizationAction() {
-		super();
-	}
-
-	/**
-	 * @see IActionDelegate#run(IAction)
-	 */
-	public void run(IAction action) {
+	@Override
+	public Object execute(ExecutionEvent event) throws ExecutionException {
+		// TODO Auto-generated method stub
+		IStructuredSelection selection = (IStructuredSelection) HandlerUtil
+				.getActiveSite(event).getSelectionProvider().getSelection();
 		Object firstElement = selection.getFirstElement();
-		if (firstElement instanceof IProject) {
-			IProject selectedProject = (IProject) firstElement;
-			ManualParallelizationAction.this.creatProject(selectedProject);
+		if (firstElement instanceof IJavaProject) {
+			IJavaProject selectedProject = (IJavaProject) firstElement;
+			ConvertParallelCommand.this.creatProject(selectedProject);
 		}
+		return null;
 	}
 
-	public void creatProject(IProject selectedProject) {
+	public void creatProject(IJavaProject selectedProject) {
 		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-		IProject project = root.getProject("Jconq" + selectedProject.getName());
+		IProject project = root.getProject("Jconq"
+				+ selectedProject.getElementName());
 		if (!project.exists()) {
 			try {
 				project.create(null);
