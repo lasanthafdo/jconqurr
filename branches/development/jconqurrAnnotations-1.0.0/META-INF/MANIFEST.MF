@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Annotaions
+Bundle-SymbolicName: org.eclipse.jconqurr.annotaions
+Bundle-Version: 1.0.0.qualifier
+Bundle-Activator: org.eclipse.jconqurr.annotaions.Activator
+Bundle-Vendor: PI-37
+Require-Bundle: org.eclipse.core.runtime
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-ActivationPolicy: lazy
