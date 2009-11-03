@@ -5,53 +5,67 @@ import java.util.concurrent.Executors;
 
 /**
  * 
- * @author lasantha
+ * @author Lasantha Fernando
  *
  */
 public class LoopHandler implements Runnable {
-	protected class LoopRange {
-		public int rangeStart, rangeEnd;
-	}
-
-	protected int loopStart, loopEnd, loopCurrent, numThreads;
-	protected LoopRange range;
+	private ExecutorService executor;
+	private LoopRange range;
+	private IForLoopTask loopTaskBody;
+	private int currentBoundary, nThreads;
 	
-	public LoopHandler(int start, int end, int nThreads) {
-		loopStart = loopCurrent = start;
-		loopEnd = end;
-		numThreads = nThreads;
+	/**
+	 * Constructs a LoopHandler that sets the start and end parameters to the range and sets
+	 * the number of threads. The constructor will also initialize the loop range, set IForLoopTask loopBody as
+	 * null and created a fixed thread pool with the given number of threads
+	 * 
+	 * @param start
+	 * 		the start value of the loop range
+	 * @param end
+	 * 		the end value of the loop range
+	 * @param numThreads
+	 * 		number of threads to create for the thread pool
+	 */
+	public LoopHandler(int start,int end,int numThreads) {
+		this.range = new LoopRange();
+		this.range.setStart(start);
+		this.range.setEnd(end);
+		this.nThreads = numThreads;
+		currentBoundary = this.range.getStart();
+		loopTaskBody = null;
+		executor = Executors.newFixedThreadPool(nThreads);
 	}
 	
-	protected synchronized LoopRange getLoopRange() {
-		if(loopCurrent >= loopEnd)
+	/**
+	 * 
+	 * @param body
+	 */
+	public void setLoopBody(IForLoopTask body) {
+		loopTaskBody = body;
+	}
+	
+	private synchronized LoopRange getTaskRange() {
+		if (currentBoundary >= range.getEnd())
 			return null;
-		range.rangeStart = loopCurrent;
-		loopCurrent += (loopEnd-loopStart)/(numThreads+1);
-		range.rangeEnd = loopCurrent < loopEnd ? loopCurrent: loopEnd;
-		LoopRange range = new LoopRange();
-		return range;
+		LoopRange result = new LoopRange();
+		result.setStart(currentBoundary);
+		currentBoundary += range.getRangeDifference()/nThreads;
+		result.setEnd((currentBoundary<range.getEnd())?currentBoundary:range.getEnd());
+		return result;
 	}
 	
-	public void doLoopRange(int start, int end) {
-		
-	}
-	
-	public void processLoop() {
-		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-		for (int i = 0; i < numThreads; i++) {
-
-			executor.execute(new Thread(this));
+	private void processLoop() {
+		LoopRange currentTaskRange;
+		while((currentTaskRange = this.getTaskRange())!=null) {
+			LoopTask loopTask = new LoopTask(currentTaskRange.getStart(),currentTaskRange.getEnd(),loopTaskBody);
+			executor.execute(new Thread(loopTask));
 		}
 		executor.shutdown();
 	}
 	
 	@Override
 	public void run() {
-		while(getLoopRange() != null) {
-			LoopRange loopRange = getLoopRange();
-			doLoopRange(loopRange.rangeStart, loopRange.rangeEnd);
-		}
+		// TODO Auto-generated method stub
+		processLoop();
 	}
-
-
 }

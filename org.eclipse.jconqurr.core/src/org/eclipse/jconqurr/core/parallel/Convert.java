@@ -155,25 +155,6 @@ public class Convert extends AbstractHandler {
 									} finally {
 										bufferManager.disconnect(path, null); // (4)
 									}
-									
-									
-									//									Document document = new Document("import java.util.List;\nclass X {}\n");
-									//									ASTParser anotherParser = ASTParser.newParser(AST.JLS3);
-									//									anotherParser.setSource(document.get().toCharArray());
-									//									CompilationUnit cu1 = (CompilationUnit) anotherParser.createAST(null);
-									//									AST ast = cu1.getAST();
-									//									ImportDeclaration id = ast.newImportDeclaration();
-									//									id.setName(ast.newName(new String[] {"java", "util", "Set"}));
-									//									ASTRewrite rewriter = ASTRewrite.create(ast);
-									//									TypeDeclaration td = (TypeDeclaration) cu1.types().get(0);
-									//									ITrackedNodePosition tdLocation = rewriter.track(td);
-									//									ListRewrite lrw = rewriter.getListRewrite(cu1, CompilationUnit.IMPORTS_PROPERTY);
-									//									lrw.insertLast(id, null);
-									//									TextEdit edits = rewriter.rewriteAST(document, null);
-									//									UndoEdit undo = edits.apply(document);
-									//									System.out.println(document.get());
-									//									assert "import java.util.List;\nimport java.util.Set;\nclass X {}".equals(document.get().toCharArray());
-
 
 								} catch (Exception e) {
 									e.printStackTrace();
