@@ -44,6 +44,10 @@ public class LoopHandler implements Runnable {
 		loopTaskBody = body;
 	}
 	
+	public IForLoopTask getLoopBody() {
+		return loopTaskBody;
+	}
+	
 	private synchronized LoopRange getTaskRange() {
 		if (currentBoundary >= range.getEnd())
 			return null;
@@ -61,6 +65,7 @@ public class LoopHandler implements Runnable {
 			executor.execute(new Thread(loopTask));
 		}
 		executor.shutdown();
+		while(!executor.isTerminated()) {}
 	}
 	
 	@Override
