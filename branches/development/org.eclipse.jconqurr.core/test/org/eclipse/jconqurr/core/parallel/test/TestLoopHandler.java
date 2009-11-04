@@ -8,38 +8,46 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestLoopHandler {
-	private static double[] calcArray = new double[5000];
-	private static double[] expectedCalc = new double[5000];
+	private static double[] calcArray = new double[50000];
+	private static double[] expectedCalc = new double[50000];
 	
 	private static int count = 0;
 	
 	@Before
 	public void initializeArrays() {
-		for(int i=0;i<5000;i++) {
+		for(int i=0;i<50000;i++) {
 			expectedCalc[i] = Math.sqrt((i*52)/32 + 1.2/(i+3.2));
 		}
 	}
 	
 	@Test
-	public void testLoopHandler() {
-		fail("Not yet implemented");
-	}
-
-	@Test
 	public void testSetLoopBody() {
-		fail("Not yet implemented");
+		LoopHandler loopHandler = new LoopHandler(0,1000,2);
+		IForLoopTask loopBody = new IForLoopTask() {
+			
+			@Override
+			public void runLoopBody(int loopVar) {
+				// TODO Auto-generated method stub
+				int testCalc = loopVar*100+950;
+				testCalc++;
+			}
+		};
+		loopHandler.setLoopBody(loopBody);
+		assertEquals(loopHandler.getLoopBody().getClass(),loopBody.getClass());
 	}
 
 	@Test
 	public void testRun() {
-		int start = 0, end = 5000, nThreads = 7;
+		int start = 0, end = 50000, nThreads = 7;
 		LoopHandler loopHandler = new LoopHandler(start, end, nThreads);
 		loopHandler.setLoopBody(new IForLoopTask() {
 			
 			@Override
 			public void runLoopBody(int loopVar) {
 				// TODO Auto-generated method stub
-				count++;
+				synchronized(this){
+					count++;
+				}
 				double calc = Math.sqrt((loopVar*52)/32 + 1.2/(loopVar+3.2));
 				calcArray[loopVar] = calc;
 			}
@@ -48,19 +56,22 @@ public class TestLoopHandler {
 		for(int i=start; i<end; i++) {
 			assertTrue(calcArray[i]==0.0);
 		}
-		
+
 		Thread loopHandlerThread = new Thread(loopHandler);
 		loopHandlerThread.start();		
 		try {
 			loopHandlerThread.join();
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
+			System.out.println("Thread Interrupted...");
 			e.printStackTrace();
 		}
+
 		for(int i=start; i<end; i++) {
 			assertEquals((Double)expectedCalc[i],(Double)calcArray[i]);
 		}
-		System.out.println("Count:" + count);
+
+		System.out.println("Test Method: testRun(), Count:" + count);
 	}
 	
 /*
