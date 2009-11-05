@@ -6,7 +6,7 @@
       <java6processors
             enableDefault="true">
          <java6processor
-               class="org.eclipse.jconqurr.annotaions.processors.ParallelForLoopProcessor">
+               class="org.eclipse.jconqurr.annotations.processors.ParallelForLoopProcessor">
          </java6processor>
       </java6processors>
    </extension>
