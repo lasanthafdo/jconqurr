@@ -6,9 +6,12 @@ import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.filebuffers.FileBuffers;
 import org.eclipse.core.filebuffers.ITextFileBuffer;
 import org.eclipse.core.filebuffers.ITextFileBufferManager;
+import org.eclipse.core.filebuffers.LocationKind;
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.jconqurr.core.ast.visitors.ForLoopVisitor;
-import org.eclipse.jconqurr.core.ast.visitors.MethodVisitor;
+import org.eclipse.jconqurr.core.ast.CompilationUnitParser;
+import org.eclipse.jconqurr.core.ast.ExpressionStatementVisitor;
+import org.eclipse.jconqurr.core.ast.ForLoopVisitor;
+import org.eclipse.jconqurr.core.ast.MethodVisitor;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -36,114 +39,64 @@ public class Convert extends AbstractHandler {
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		// TODO Auto-generated method stub
-		System.out.println("Inside Execute method.....");
-
 		IStructuredSelection selection = (IStructuredSelection) HandlerUtil
 		.getActiveMenuSelection(event);
 		Object firstElement = selection.getFirstElement();
 
 		if (firstElement instanceof ICompilationUnit) {
 			ICompilationUnit cu = (ICompilationUnit) firstElement;
-			CompilationUnit parsedAST = parse(cu);
+			CompilationUnit unit = CompilationUnitParser.parse(cu);
 			MethodVisitor methodVisitor = new MethodVisitor();
 			ForLoopVisitor loopVisitor = new ForLoopVisitor();
 
 			//vist the methods
-			parsedAST.accept(methodVisitor);
+			unit.accept(methodVisitor);
 
 			for(MethodDeclaration method: methodVisitor.getMethods()) {
 				IAnnotationBinding[] annotationBinding =  method.resolveBinding().getAnnotations();
 				if(annotationBinding.length>0) {
 					for(int i=0; i<annotationBinding.length;i++) {
 						if(annotationBinding[i].getName().equals("ParallelFor")) {
-							System.out.println("Annotation:" + annotationBinding[i].getName());
 							method.accept(loopVisitor);
 							for(ForStatement forLoop: loopVisitor.getForLoops()) {
-								System.out.println("METHOD BODY:" + method.getBody().toString());
-
 								String strExpression = forLoop.getExpression().toString();
 								String regex = "[<>[<=][>=]]";
 								String result[] = {};
 								result = strExpression.split(regex);
 								Integer conditionInt = new Integer(0);
 
-								System.out.println("MAX:" + Integer.MAX_VALUE);								
 								for(int j=0; j<result.length; j++) {
 									if(isParsableToInt(result[j].trim())) { 
 										conditionInt = Integer.parseInt(result[j].trim());
 										break;
 									}
-									//									conditionInt = Integer.parseInt(result[i].trim());
-									System.out.println("Result[" + j + "]:" + result[j]);
 								}
 								int newCondition1 = (int)conditionInt/2;
-								//								int newCondition2 = (int)conditionInt;
+								//int newCondition2 = (int)conditionInt;
 
 								try {
-
-									String code = "\n" + 
-									"public class TestClass {\n" +
-									"public void myMethod() {\n" + 
-									"for(int i=0;i<" + newCondition1 + ";i++)";
-									code = code + forLoop.getBody().toString();
-									code = code + "\n} + \n}";
-									System.out.println(code); 
-
-									ForStatement newForStmt = forLoop;
-
-									/*
-									 * 
-									 */
-									ASTParser tempParser = ASTParser.newParser(AST.JLS3); // Java 5.0 and up
-									tempParser.setKind(ASTParser.K_COMPILATION_UNIT);
-									tempParser.setSource(code.toCharArray());
-									tempParser.setResolveBindings(true);
-									tempParser.setBindingsRecovery(true);
-									CompilationUnit tempUnit = (CompilationUnit) tempParser.createAST(null /* IProgrssMonitor*/);
-
-									System.out.println("Unit:\n" + tempUnit.toString());
-									ForLoopVisitor tempLoopVisitor = new ForLoopVisitor();
-									tempUnit.accept(tempLoopVisitor);
-									for(ForStatement forStatmnt:tempLoopVisitor.getForLoops()) {
-										System.out.println("Mod Loop:\n" + forStatmnt.toString());
-									}
-									/*
-									 * 
-									 */
-
-									//newForStmt.setStructuralProperty(ForStatement.EXPRESSION_PROPERTY, ("i<" + newCondition1));
-									ASTRewrite rewrite = ASTRewrite.create(parsedAST.getAST());
-									System.out.println("ForStatemntProps:\n" + forLoop.properties());
-									//forLoop.setExpression(newExpr);
+									ExpressionStatementVisitor exprStmtVisitor = new ExpressionStatementVisitor();
 									Block block = method.getBody();
-									//Statement loopBody = (Statement)rewrite.createStringPlaceholder(forLoop.getBody().toString(), ASTNode.BLOCK);
-									//newForStmt.setBody(loopBody);
-									System.out.println(forLoop.getExpression());
-
-									Block testStatement = (Block)rewrite.createStringPlaceholder(code, ASTNode.BLOCK);
-									ListRewrite listRewrite = rewrite.getListRewrite(block, Block.STATEMENTS_PROPERTY);
-
-									System.out.println("For Statement:\n" + newForStmt.toString());
-									System.out.println("Test Statement:\n" + testStatement.toString());
-									System.out.println(ExpressionStatement.propertyDescriptors(AST.JLS3));
-									System.out.println("ForStatemntProps:\n" + ForStatement.propertyDescriptors(AST.JLS3));									
-									listRewrite.insertAfter(tempUnit,forLoop,null);
+									block.accept(exprStmtVisitor);
+									for(ExpressionStatement exprStmt: exprStmtVisitor.getExpressionStatements()) {
+										System.out.println(exprStmt.toString());
+									}
 
 									ITextFileBufferManager bufferManager = FileBuffers.getTextFileBufferManager(); // get the buffer manager
-									IPath path = parsedAST.getJavaElement().getPath(); // unit: instance of CompilationUnit
+									IPath path = unit.getJavaElement().getPath(); // unit: instance of CompilationUnit
 									try {
-										bufferManager.connect(path, null); // (1)
-										ITextFileBuffer textFileBuffer = bufferManager.getTextFileBuffer(path);
+										bufferManager.connect(path,LocationKind.IFILE, null); // (1)
+										ITextFileBuffer textFileBuffer = bufferManager.getTextFileBuffer(path, LocationKind.IFILE);
 										// retrieve the buffer
 										IDocument document = textFileBuffer.getDocument();
 										// ... edit the document here ... 
-										AST ast = parsedAST.getAST();
+										AST ast = unit.getAST();
 										ImportDeclaration id = ast.newImportDeclaration();
 										id.setName(ast.newName(new String[] {"java", "util", "Set"}));
 										ASTRewrite tempRewriter = ASTRewrite.create(ast);
-										TypeDeclaration td = (TypeDeclaration) parsedAST.types().get(0);
+										TypeDeclaration td = (TypeDeclaration) unit.types().get(0);
 										ITrackedNodePosition tdLocation = tempRewriter.track(td);
-										ListRewrite lrw = tempRewriter.getListRewrite(parsedAST, CompilationUnit.IMPORTS_PROPERTY);
+										ListRewrite lrw = tempRewriter.getListRewrite(unit, CompilationUnit.IMPORTS_PROPERTY);
 										lrw.insertLast(id, null);
 										TextEdit edits = tempRewriter.rewriteAST(document, null);
 										UndoEdit undo = edits.apply(document);
@@ -153,14 +106,12 @@ public class Convert extends AbstractHandler {
 										.commit(null /* ProgressMonitor */, false /* Overwrite */); // (3)
 
 									} finally {
-										bufferManager.disconnect(path, null); // (4)
+										bufferManager.disconnect(path, LocationKind.IFILE, null); // (4)
 									}
 
 								} catch (Exception e) {
 									e.printStackTrace();
 								}
-
-								System.out.println("METHOD BODY:" + method.getBody().toString());
 							}
 						}
 					}
@@ -183,13 +134,5 @@ public class Convert extends AbstractHandler {
 			return false;
 		}
 	}
-	private static CompilationUnit parse(ICompilationUnit unit) {
-		ASTParser parser = ASTParser.newParser(AST.JLS3);
-		parser.setKind(ASTParser.K_COMPILATION_UNIT);
-		parser.setSource(unit);
-		parser.setResolveBindings(true);
-		return (CompilationUnit) parser.createAST(null);
-	}
-
 }
 
