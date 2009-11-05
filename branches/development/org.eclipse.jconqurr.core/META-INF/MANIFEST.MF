@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: JConqurr Core
 Bundle-SymbolicName: org.eclipse.jconqurr.core;singleton:=true
-Bundle-Version: 1.0.0.qualifier
+Bundle-Version: 1.0.0.v20091105
 Bundle-Activator: org.eclipse.jconqurr.core.Activator
 Bundle-Vendor: PI-37
 Require-Bundle: org.eclipse.ui,
