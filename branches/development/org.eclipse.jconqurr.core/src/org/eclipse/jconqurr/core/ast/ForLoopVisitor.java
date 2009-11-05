@@ -1,4 +1,4 @@
-package org.eclipse.jconqurr.core.ast.visitors;
+package org.eclipse.jconqurr.core.ast;
 
 import java.util.ArrayList;
 import java.util.List;
