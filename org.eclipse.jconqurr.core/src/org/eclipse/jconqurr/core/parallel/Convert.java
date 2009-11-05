@@ -8,6 +8,7 @@ import org.eclipse.core.filebuffers.ITextFileBuffer;
 import org.eclipse.core.filebuffers.ITextFileBufferManager;
 import org.eclipse.core.filebuffers.LocationKind;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.jconqurr.core.ast.AnnotationVisitor;
 import org.eclipse.jconqurr.core.ast.CompilationUnitParser;
 import org.eclipse.jconqurr.core.ast.ExpressionStatementVisitor;
 import org.eclipse.jconqurr.core.ast.ForLoopVisitor;
@@ -22,6 +23,7 @@ import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IAnnotationBinding;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
+import org.eclipse.jdt.core.dom.MarkerAnnotation;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
@@ -49,6 +51,9 @@ public class Convert extends AbstractHandler {
 			MethodVisitor methodVisitor = new MethodVisitor();
 			ForLoopVisitor loopVisitor = new ForLoopVisitor();
 
+			ForLoopModifier flModifier = new ForLoopModifier();
+			flModifier.setCompilationUnit(unit);
+			flModifier.analyzeCode();
 			//vist the methods
 			unit.accept(methodVisitor);
 
