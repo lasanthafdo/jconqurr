@@ -1,0 +1,14 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: %Bundle-Name.0
+Bundle-SymbolicName: org.eclipse.jconqurr.annotations;singleton:=true
+Bundle-Version: 1.0.0.v20091106
+Bundle-Activator: org.eclipse.jconqurr.annotations.Activator
+Bundle-Vendor: %Bundle-Vendor.0
+Require-Bundle: org.eclipse.core.runtime,
+ org.eclipse.jdt.apt.core
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-ActivationPolicy: lazy
+Export-Package: org.eclipse.jconqurr.annotations,
+ org.eclipse.jconqurr.annotations.library,
+ org.eclipse.jconqurr.annotations.processors
