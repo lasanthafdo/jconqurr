@@ -10,6 +10,7 @@ import java.util.Map;
 
 import org.eclipse.jconqurr.core.ast.ForLoopVisitor;
 import org.eclipse.jconqurr.core.parallel.ForLoopModifier;
+import org.eclipse.jconqurr.core.parallel.ICompilationUnitModifier;
 import org.eclipse.jconqurr.core.parallel.IForLoopModifier;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -22,23 +23,24 @@ import org.junit.Test;
 
 public class TestForLoopModifier {
 	private CompilationUnit unit;
+	private ICompilationUnitModifier cuModifier;
 	private IForLoopModifier flModifier;
 	
 	@Before
 	public void initializeCU() {
 		unit = getTestCompilationUnit();
 		flModifier = new ForLoopModifier();
-		flModifier.setCompilationUnit(unit);
+		cuModifier.setCompilationUnit(unit);
 	}
 	
 	@Ignore
 	public void testAnalyzeCode() {
 		assertTrue(unit.getProblems().length == 0);
 
-		flModifier.setCompilationUnit(unit);
-		assertNotNull(flModifier.getCompilationUnit());
+		cuModifier.setCompilationUnit(unit);
+		assertNotNull(cuModifier.getCompilationUnit());
 
-		flModifier.analyzeCode();
+		cuModifier.analyzeCode();
 	}
 	
 	@Ignore
@@ -46,14 +48,14 @@ public class TestForLoopModifier {
 		assertNotNull(unit);
 		
 		try {
-			flModifier.analyzeCode();
+			cuModifier.analyzeCode();
 		} catch (Exception e){
 			assertTrue(e instanceof NullPointerException);
 		}
 		
-		flModifier.setCompilationUnit(unit);
-		assertEquals(unit, flModifier.getCompilationUnit());
-		assertNotNull(flModifier.getCompilationUnit());
+		cuModifier.setCompilationUnit(unit);
+		assertEquals(unit, cuModifier.getCompilationUnit());
+		assertNotNull(cuModifier.getCompilationUnit());
 	}
 
 	@Test
