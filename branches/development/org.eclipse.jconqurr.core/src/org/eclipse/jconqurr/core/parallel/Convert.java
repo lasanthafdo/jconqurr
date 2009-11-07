@@ -9,23 +9,11 @@ import org.eclipse.core.filebuffers.ITextFileBufferManager;
 import org.eclipse.core.filebuffers.LocationKind;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.jconqurr.core.ast.AnnotationVisitor;
 import org.eclipse.jconqurr.core.ast.CompilationUnitParser;
-import org.eclipse.jconqurr.core.ast.ExpressionStatementVisitor;
-import org.eclipse.jconqurr.core.ast.ForLoopVisitor;
-import org.eclipse.jconqurr.core.ast.MethodVisitor;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.dom.AST;
-import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.ASTParser;
-import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.ExpressionStatement;
-import org.eclipse.jdt.core.dom.ForStatement;
-import org.eclipse.jdt.core.dom.IAnnotationBinding;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
-import org.eclipse.jdt.core.dom.MarkerAnnotation;
-import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ITrackedNodePosition;
@@ -49,86 +37,58 @@ public class Convert extends AbstractHandler {
 		if (firstElement instanceof ICompilationUnit) {
 			ICompilationUnit cu = (ICompilationUnit) firstElement;
 			CompilationUnit unit = CompilationUnitParser.parse(cu);
-			MethodVisitor methodVisitor = new MethodVisitor();
-			ForLoopVisitor loopVisitor = new ForLoopVisitor();
 
-			ForLoopModifier flModifier = new ForLoopModifier();
-			Block modBlock;
-			flModifier.setCompilationUnit(unit);
-			flModifier.analyzeCode();
-			flModifier.modifyCode();
-			modBlock = flModifier.getModifiedBlock();
-			//vist the methods
-			unit.accept(methodVisitor);
+			ICompilationUnitModifier cuModifier = new CompilationUnitModifier(unit);
+			
+			cuModifier.analyzeCode();
+			cuModifier.modifyCode();
+			IForLoopModifier flModifier = cuModifier.getForLoopModifier(0);
 
-			for(MethodDeclaration method: methodVisitor.getMethods()) {
-				IAnnotationBinding[] annotationBinding =  method.resolveBinding().getAnnotations();
-				if(annotationBinding.length>0) {
-					for(int i=0; i<annotationBinding.length;i++) {
-						if(annotationBinding[i].getName().equals("ParallelFor")) {
-							method.accept(loopVisitor);
-							for(ForStatement forLoop: loopVisitor.getForLoops()) {
-								ITextFileBufferManager bufferManager = FileBuffers.getTextFileBufferManager(); // get the buffer manager
-								IPath path = unit.getJavaElement().getPath(); // unit: instance of CompilationUnit
-								try {
-									bufferManager.connect(path,LocationKind.IFILE, null); // (1)
-									ITextFileBuffer textFileBuffer = bufferManager.getTextFileBuffer(path, LocationKind.IFILE);
-									// retrieve the buffer
-									IDocument document = textFileBuffer.getDocument();
-									// ... edit the document here ... 
-									AST ast = unit.getAST();
-									ASTRewrite tempRewriter = ASTRewrite.create(ast);
+			ITextFileBufferManager bufferManager = FileBuffers.getTextFileBufferManager(); // get the buffer manager
+			IPath path = unit.getJavaElement().getPath(); // unit: instance of CompilationUnit
+			try {
+				bufferManager.connect(path,LocationKind.IFILE, null); // (1)
+				ITextFileBuffer textFileBuffer = bufferManager.getTextFileBuffer(path, LocationKind.IFILE);
+				// retrieve the buffer
+				IDocument document = textFileBuffer.getDocument();
+				// ... edit the document here ... 
+				AST ast = unit.getAST();
+				ASTRewrite tempRewriter = ASTRewrite.create(ast);
 
-									ImportDeclaration lhDeclaration = ast.newImportDeclaration();
-									lhDeclaration.setName(ast.newName(new String[] {"org", "eclipse", "jconqurr","core","parallel","loops","LoopHandler"}));
-									ImportDeclaration iftDeclaration = ast.newImportDeclaration();
-									iftDeclaration.setName(ast.newName(new String[] {"org", "eclipse", "jconqurr","core","parallel","loops","IForLoopTask"}));
+				ImportDeclaration lhDeclaration = ast.newImportDeclaration();
+				lhDeclaration.setName(ast.newName(new String[] {"org", "eclipse", "jconqurr","core","parallel","loops","LoopHandler"}));
+				ImportDeclaration iftDeclaration = ast.newImportDeclaration();
+				iftDeclaration.setName(ast.newName(new String[] {"org", "eclipse", "jconqurr","core","parallel","loops","IForLoopTask"}));
 
 
-									TypeDeclaration td = (TypeDeclaration) unit.types().get(0);
-									ITrackedNodePosition tdLocation = tempRewriter.track(td);
-									tempRewriter.replace(forLoop, modBlock, null);
-									ListRewrite lrw = tempRewriter.getListRewrite(unit, CompilationUnit.IMPORTS_PROPERTY);
-									lrw.insertLast(lhDeclaration, null);
-									lrw.insertLast(iftDeclaration, null);
-									TextEdit edits = tempRewriter.rewriteAST(document, null);
-									UndoEdit undo = edits.apply(document);
+				TypeDeclaration td = (TypeDeclaration) unit.types().get(0);
+				ITrackedNodePosition tdLocation = tempRewriter.track(td);
+				tempRewriter.replace(flModifier.getForStatement(), flModifier.getModifiedBlock(), null);
+				ListRewrite lrw = tempRewriter.getListRewrite(unit, CompilationUnit.IMPORTS_PROPERTY);
+				lrw.insertLast(lhDeclaration, null);
+				lrw.insertLast(iftDeclaration, null);
+				TextEdit edits = tempRewriter.rewriteAST(document, null);
+				UndoEdit undo = edits.apply(document);
 
-									// commit changes to underlying file
-									textFileBuffer
-									.commit(null /* ProgressMonitor */, false /* Overwrite */); // (3)
-								} catch (Exception e) {
-									e.printStackTrace();
-								} finally {
-									try {
-										bufferManager.disconnect(path, LocationKind.IFILE, null);
-									} catch (CoreException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									}
-								}
-
-							}
-						}
-					}
+				// commit changes to underlying file
+				textFileBuffer
+				.commit(null /* ProgressMonitor */, false /* Overwrite */); // (3)
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				try {
+					bufferManager.disconnect(path, LocationKind.IFILE, null);
+				} catch (CoreException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
 			}
-
 		} else {
 			MessageDialog.openInformation(HandlerUtil.getActiveShell(event),
 					"Information", "Please select a java source file");
 		}
 
 		return null;
-	}
-
-	private boolean isParsableToInt(String s) {
-		try {
-			Integer.parseInt(s);
-			return true;
-		} catch (NumberFormatException e) {
-			return false;
-		}
 	}
 }
 

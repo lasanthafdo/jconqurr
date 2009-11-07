@@ -1,58 +1,30 @@
 package org.eclipse.jconqurr.core.parallel;
 
-import java.util.List;
-
-import org.eclipse.jconqurr.core.ast.ForLoopVisitor;
-import org.eclipse.jconqurr.core.ast.MethodVisitor;
 import org.eclipse.jconqurr.core.ast.StatementParser;
-import org.eclipse.jconqurr.core.parallel.loops.IForLoopTask;
-import org.eclipse.jconqurr.core.parallel.loops.LoopHandler;
 import org.eclipse.jdt.core.dom.Block;
-import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ForStatement;
-import org.eclipse.jdt.core.dom.IAnnotationBinding;
-import org.eclipse.jdt.core.dom.IMethodBinding;
-import org.eclipse.jdt.core.dom.MethodDeclaration;
 
 public class ForLoopModifier implements IForLoopModifier {
 	private String modifiedCode;
-	private CompilationUnit compilationUnit;
-	private List<ForStatement> forStatements;
-	private List<ForStatement> newForStatements;
+	private ForStatement forStatement;
 	private Block modifiedBlock;
 	
 	public ForLoopModifier() {
 		modifiedCode = "";
-		compilationUnit = null;
+		forStatement = null;
+	}
+	
+	public ForLoopModifier(ForStatement fs) {
+		modifiedCode = "";
+		forStatement = fs;
 	}
 	
 	@Override
 	public void analyzeCode() {
-		if(compilationUnit == null) throw new NullPointerException("Compilation Unit cannot be null");
-
-		MethodVisitor methodVisitor = new MethodVisitor();
-		compilationUnit.accept(methodVisitor);
-		for(MethodDeclaration method: methodVisitor.getMethods()) {
-			IMethodBinding mb = method.resolveBinding();
-			if(mb != null) {
-				IAnnotationBinding[] ab = mb.getAnnotations();
-				for(int i=0; i<ab.length; i++) {
-					if(ab[i] != null) {
-						if(ab[i].getAnnotationType().getName().trim().equals("ParallelFor")) {
-							ForLoopVisitor loopVisitor = new ForLoopVisitor();
-							method.accept(loopVisitor);
-							forStatements = loopVisitor.getForLoops();
-						}
-					}
-				}
-			}
-		}
+		
 	}
 	
-	@Override
-	public void setCompilationUnit(CompilationUnit cu) {
-		compilationUnit = cu;
-	}
+
 	
 	@Override
 	public String getModifiedCode() {
@@ -60,8 +32,8 @@ public class ForLoopModifier implements IForLoopModifier {
 	}
 	
 	@Override
-	public List<ForStatement> getForStatements() {
-		return forStatements;
+	public ForStatement getForStatement() {
+		return forStatement;
 	}
 
 	@Override
@@ -70,18 +42,8 @@ public class ForLoopModifier implements IForLoopModifier {
 	}
 	
 	@Override
-	public CompilationUnit getCompilationUnit() {
-		// TODO Auto-generated method stub
-		return compilationUnit;
-	}
-	
-	@Override
 	public void modifyCode() {
-		if(forStatements == null) {
-			System.out.println("NULL");
-			return;
-		}
-		for(ForStatement forStatement: forStatements) {
+		if(forStatement != null) {
 			String code = "";
 			String initializer = forStatement.initializers().get(0).toString();
 			String initResult[] = initializer.split("[=]");
@@ -105,8 +67,8 @@ public class ForLoopModifier implements IForLoopModifier {
 				"Thread loopHandlerThread = new Thread(loopHandler);\n" + 
 				"loopHandlerThread.start();\n";
 			Block block = StatementParser.parse(code);
+			modifiedCode = code;
 			modifiedBlock = block;
-			System.out.println(code);
 		}
 	}
 }
