@@ -7,6 +7,7 @@ import org.eclipse.core.filebuffers.FileBuffers;
 import org.eclipse.core.filebuffers.ITextFileBuffer;
 import org.eclipse.core.filebuffers.ITextFileBufferManager;
 import org.eclipse.core.filebuffers.LocationKind;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.jconqurr.core.ast.AnnotationVisitor;
 import org.eclipse.jconqurr.core.ast.CompilationUnitParser;
@@ -52,8 +53,11 @@ public class Convert extends AbstractHandler {
 			ForLoopVisitor loopVisitor = new ForLoopVisitor();
 
 			ForLoopModifier flModifier = new ForLoopModifier();
+			Block modBlock;
 			flModifier.setCompilationUnit(unit);
 			flModifier.analyzeCode();
+			flModifier.modifyCode();
+			modBlock = flModifier.getModifiedBlock();
 			//vist the methods
 			unit.accept(methodVisitor);
 
@@ -64,59 +68,46 @@ public class Convert extends AbstractHandler {
 						if(annotationBinding[i].getName().equals("ParallelFor")) {
 							method.accept(loopVisitor);
 							for(ForStatement forLoop: loopVisitor.getForLoops()) {
-								String strExpression = forLoop.getExpression().toString();
-								String regex = "[<>[<=][>=]]";
-								String result[] = {};
-								result = strExpression.split(regex);
-								Integer conditionInt = new Integer(0);
-
-								for(int j=0; j<result.length; j++) {
-									if(isParsableToInt(result[j].trim())) { 
-										conditionInt = Integer.parseInt(result[j].trim());
-										break;
-									}
-								}
-								int newCondition1 = (int)conditionInt/2;
-								//int newCondition2 = (int)conditionInt;
-
+								ITextFileBufferManager bufferManager = FileBuffers.getTextFileBufferManager(); // get the buffer manager
+								IPath path = unit.getJavaElement().getPath(); // unit: instance of CompilationUnit
 								try {
-									ExpressionStatementVisitor exprStmtVisitor = new ExpressionStatementVisitor();
-									Block block = method.getBody();
-									block.accept(exprStmtVisitor);
-									for(ExpressionStatement exprStmt: exprStmtVisitor.getExpressionStatements()) {
-										System.out.println(exprStmt.toString());
-									}
+									bufferManager.connect(path,LocationKind.IFILE, null); // (1)
+									ITextFileBuffer textFileBuffer = bufferManager.getTextFileBuffer(path, LocationKind.IFILE);
+									// retrieve the buffer
+									IDocument document = textFileBuffer.getDocument();
+									// ... edit the document here ... 
+									AST ast = unit.getAST();
+									ASTRewrite tempRewriter = ASTRewrite.create(ast);
 
-									ITextFileBufferManager bufferManager = FileBuffers.getTextFileBufferManager(); // get the buffer manager
-									IPath path = unit.getJavaElement().getPath(); // unit: instance of CompilationUnit
-									try {
-										bufferManager.connect(path,LocationKind.IFILE, null); // (1)
-										ITextFileBuffer textFileBuffer = bufferManager.getTextFileBuffer(path, LocationKind.IFILE);
-										// retrieve the buffer
-										IDocument document = textFileBuffer.getDocument();
-										// ... edit the document here ... 
-										AST ast = unit.getAST();
-										ImportDeclaration id = ast.newImportDeclaration();
-										id.setName(ast.newName(new String[] {"java", "util", "Set"}));
-										ASTRewrite tempRewriter = ASTRewrite.create(ast);
-										TypeDeclaration td = (TypeDeclaration) unit.types().get(0);
-										ITrackedNodePosition tdLocation = tempRewriter.track(td);
-										ListRewrite lrw = tempRewriter.getListRewrite(unit, CompilationUnit.IMPORTS_PROPERTY);
-										lrw.insertLast(id, null);
-										TextEdit edits = tempRewriter.rewriteAST(document, null);
-										UndoEdit undo = edits.apply(document);
+									ImportDeclaration lhDeclaration = ast.newImportDeclaration();
+									lhDeclaration.setName(ast.newName(new String[] {"org", "eclipse", "jconqurr","core","parallel","loops","LoopHandler"}));
+									ImportDeclaration iftDeclaration = ast.newImportDeclaration();
+									iftDeclaration.setName(ast.newName(new String[] {"org", "eclipse", "jconqurr","core","parallel","loops","IForLoopTask"}));
 
-										// commit changes to underlying file
-										textFileBuffer
-										.commit(null /* ProgressMonitor */, false /* Overwrite */); // (3)
 
-									} finally {
-										bufferManager.disconnect(path, LocationKind.IFILE, null); // (4)
-									}
+									TypeDeclaration td = (TypeDeclaration) unit.types().get(0);
+									ITrackedNodePosition tdLocation = tempRewriter.track(td);
+									tempRewriter.replace(forLoop, modBlock, null);
+									ListRewrite lrw = tempRewriter.getListRewrite(unit, CompilationUnit.IMPORTS_PROPERTY);
+									lrw.insertLast(lhDeclaration, null);
+									lrw.insertLast(iftDeclaration, null);
+									TextEdit edits = tempRewriter.rewriteAST(document, null);
+									UndoEdit undo = edits.apply(document);
 
+									// commit changes to underlying file
+									textFileBuffer
+									.commit(null /* ProgressMonitor */, false /* Overwrite */); // (3)
 								} catch (Exception e) {
 									e.printStackTrace();
+								} finally {
+									try {
+										bufferManager.disconnect(path, LocationKind.IFILE, null);
+									} catch (CoreException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
 								}
+
 							}
 						}
 					}

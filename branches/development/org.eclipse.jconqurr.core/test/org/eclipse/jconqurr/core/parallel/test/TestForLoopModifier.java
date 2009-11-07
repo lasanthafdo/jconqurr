@@ -8,33 +8,42 @@ import static org.junit.Assert.fail;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.eclipse.jconqurr.core.ast.ForLoopVisitor;
 import org.eclipse.jconqurr.core.parallel.ForLoopModifier;
 import org.eclipse.jconqurr.core.parallel.IForLoopModifier;
 import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.ForStatement;
+import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestForLoopModifier {
-
-	@Test
+	private CompilationUnit unit;
+	private IForLoopModifier flModifier;
+	
+	@Before
+	public void initializeCU() {
+		unit = getTestCompilationUnit();
+		flModifier = new ForLoopModifier();
+		flModifier.setCompilationUnit(unit);
+	}
+	
+	@Ignore
 	public void testAnalyzeCode() {
-		CompilationUnit cu = getTestCompilationUnit();
-		assertTrue(cu.getProblems().length == 0);
+		assertTrue(unit.getProblems().length == 0);
 
-		IForLoopModifier flModifier = new ForLoopModifier();
-
-		flModifier.setCompilationUnit(cu);
+		flModifier.setCompilationUnit(unit);
 		assertNotNull(flModifier.getCompilationUnit());
 
 		flModifier.analyzeCode();
 	}
 	
-	@Test
+	@Ignore
 	public void testSetCompilationUnit() {
-		CompilationUnit cu = getTestCompilationUnit();
-		assertNotNull(cu);
-		IForLoopModifier flModifier = new ForLoopModifier();
+		assertNotNull(unit);
 		
 		try {
 			flModifier.analyzeCode();
@@ -42,8 +51,8 @@ public class TestForLoopModifier {
 			assertTrue(e instanceof NullPointerException);
 		}
 		
-		flModifier.setCompilationUnit(cu);
-		assertEquals(cu, flModifier.getCompilationUnit());
+		flModifier.setCompilationUnit(unit);
+		assertEquals(unit, flModifier.getCompilationUnit());
 		assertNotNull(flModifier.getCompilationUnit());
 	}
 
@@ -57,14 +66,22 @@ public class TestForLoopModifier {
 		fail("Not yet implemented");
 	}
 	
+	@Test
+	public void testModifyCode() {
+		flModifier.analyzeCode();
+		flModifier.modifyCode();
+	}
+	
 	private CompilationUnit getTestCompilationUnit() {
 		String code = "\n" + 
 		"import org.eclipse.jconqurr.annotations.library.ParallelFor;\n\n" +
 		"public class MyClass {\n" +
 		"@ParallelFor\n" +
-		"public void myMethod() {\n" + 
+		"public void myMethod() {\n" +
+		"\t@ParallelFor {\n" +
 		"\tfor(int i=0;i<5000;i++) {\n" +
 		"\t\tint calc=i*900+12/45;\n" +
+		"\t}\n" +
 		"\t}\n" +
 		"}\n" +
 		"\n" +
@@ -82,9 +99,24 @@ public class TestForLoopModifier {
 		tempParser.setCompilerOptions(options);
 		tempParser.setSource(code.toCharArray());
 		tempParser.setResolveBindings(true);
-		CompilationUnit tempUnit = (CompilationUnit) tempParser.createAST(null /* IProgrssMonitor*/);
+		return (CompilationUnit) tempParser.createAST(null /* IProgrssMonitor*/);
+	}
+	
+	@Ignore 
+	public void testParseTree() {
+		CompilationUnit unit = getTestCompilationUnit();
+		ForLoopVisitor flVisitor = new ForLoopVisitor();
+		unit.accept(flVisitor);
 		
-		return tempUnit;
+		for(ForStatement forStatement: flVisitor.getForLoops()) {
+			ASTNode node = forStatement;
+			while(node != null) {
+				System.out.println(node.getNodeType());
+				System.out.println(node.toString() + "\n");
+				node = node.getParent();
+			}
+			
+		}
 	}
 
 }

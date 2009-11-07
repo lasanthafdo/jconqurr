@@ -5,7 +5,7 @@
          point="org.eclipse.ui.commands">
       <command
             id="org.eclipse.jconqurr.core.parallel.convert"
-            name="Convert To Parallel">
+            name="%command.name">
       </command>
    </extension>
    <extension
@@ -20,10 +20,10 @@
       <menuContribution
             locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
          <menu
-               label="JConqurr">
+               label="%menu.label">
             <command
                   commandId="org.eclipse.jconqurr.core.parallel.convert"
-                  label="Convert To Parallel"
+                  label="%command.label"
                   style="push">
             </command>
          </menu>
