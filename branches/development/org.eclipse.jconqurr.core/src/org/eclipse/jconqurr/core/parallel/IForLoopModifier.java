@@ -9,8 +9,15 @@ import org.eclipse.jdt.core.dom.ForStatement;
  *
  */
 public interface IForLoopModifier {
+	/**
+	 * Analyzes code already present
+	 */
 	public void analyzeCode();
 	public void modifyCode();
+	/**
+	 * 
+	 * @return
+	 */
 	public String getModifiedCode();
 	public Block getModifiedBlock();
 	public ForStatement getForStatement();
