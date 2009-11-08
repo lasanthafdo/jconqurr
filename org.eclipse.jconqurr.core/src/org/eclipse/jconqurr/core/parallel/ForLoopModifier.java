@@ -65,7 +65,12 @@ public class ForLoopModifier implements IForLoopModifier {
 				forStatement.getBody().toString() +
 				"});\n" +
 				"Thread loopHandlerThread = new Thread(loopHandler);\n" + 
-				"loopHandlerThread.start();\n";
+				"loopHandlerThread.start();\n" +
+				"try {\n" +
+				"\tloopHandlerThread.join();\n" +
+				"} catch (InterruptedException e) {\n" +
+				"\te.printStackTrace();\n" +
+				"}\n";			
 			Block block = StatementParser.parse(code);
 			modifiedCode = code;
 			modifiedBlock = block;
