@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.commands">
+      <command
+            id="org.eclipse.jconqurr.core.build"
+            name="Build Parallel Proj">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="org.eclipse.jconqurr.internal.ui.commands.ConvertParallelCommand"
+            commandId="org.eclipse.jconqurr.core.build">
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
+         <menu
+               label="JConqurr">
+            <command
+                  commandId="org.eclipse.jconqurr.core.build"
+                  label="JQ-Build Parallel Project "
+                  style="push">
+            </command>
+         </menu>
+      </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.popupMenus">
+      <objectContribution
+            adaptable="false"
+            id="org.eclipse.jconqurr.core.objectContribution1"
+            objectClass="org.eclipse.core.resources.IProject">
+         <menu
+               id="org.eclipse.jconqurr.core.menu1"
+               label="Jconqurr">
+            <separator
+                  name="group1">
+            </separator>
+         </menu>
+         <action
+               class="org.eclipse.jconqurr.internal.ui.actions.ConvertParallelAction"
+               id="org.eclipse.jconqurr.core.buildAction"
+               label="JQ- Build Parallel Project"
+               menubarPath="org.eclipse.jconqurr.ui.menu1/group1">
+         </action>
+      </objectContribution>
+   </extension>
+
+</plugin>
