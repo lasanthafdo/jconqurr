@@ -16,8 +16,10 @@ public class ForLoopVisitor extends ASTVisitor {
 	
 	@Override
 	public boolean visit(ForStatement node) {
+		
 		forLoops.add(node);
 		return super.visit(node);
+		
 	}
 	
 	/**
