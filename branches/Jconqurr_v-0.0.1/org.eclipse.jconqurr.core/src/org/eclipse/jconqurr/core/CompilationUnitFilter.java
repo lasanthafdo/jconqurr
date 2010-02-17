@@ -82,15 +82,12 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 									.trim().equals("ParallelFor")) {
 								annotatedLoopMethods.add(method);
 							} else {
-
 								notAnnotatedMethods.add(method);
 							}
 						}
 					}
 				} else
 					notAnnotatedMethods.add(method);
-				System.out.println("added a not annotated method");
-				System.out.println(method.toString());
 			}
 		}
 
