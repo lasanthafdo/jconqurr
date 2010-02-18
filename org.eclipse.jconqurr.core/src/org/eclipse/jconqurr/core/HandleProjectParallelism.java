@@ -3,6 +3,9 @@ package org.eclipse.jconqurr.core;
 import java.util.List;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.jconqurr.core.ast.visitors.FieldDeclarationVisitor;
+import org.eclipse.jconqurr.core.data.ForLoopHandler;
+import org.eclipse.jconqurr.core.data.IForLoopHandler;
 import org.eclipse.jconqurr.core.task.ITaskMethod;
 import org.eclipse.jconqurr.core.task.TaskMethod;
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -14,7 +17,9 @@ import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 
 public class HandleProjectParallelism implements IHandleProjectParallelism {
@@ -24,6 +29,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 	private String taskParallelCode;
 	private String loopParallelCode;
 	private String otherMethods;
+	private String fieldDeclarations;
 
 	/**
 	 * @see HandleProjectParallelism#convert(IJavaProject, ICompilationUnit)
@@ -36,7 +42,13 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		List<MethodDeclaration> taskParallelMethods = filter
 				.getAnnotatedParallelTaskMethods();
 		List<MethodDeclaration> otherMethods = filter.getNotAnnotatedMethods();
-
+		List<MethodDeclaration> loopParallelMethods=filter.getAnnotatedParallelForMethods();
+		FieldDeclarationVisitor fieldVisitor=new FieldDeclarationVisitor();
+		cu.accept(fieldVisitor);
+		fieldDeclarations="";
+		for(FieldDeclaration f:fieldVisitor.getFields()){
+			fieldDeclarations=fieldDeclarations+f.toString();
+		}
 		this.taskParallelCode = "";
 		for (MethodDeclaration method : taskParallelMethods) {
 			ITaskMethod taskMethod = new TaskMethod();
@@ -45,7 +57,15 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 			this.taskParallelCode = this.taskParallelCode
 					+ taskMethod.getModifiedMethod();
 		}
-
+		this.loopParallelCode = "";
+		for (MethodDeclaration method :loopParallelMethods ) {
+			IForLoopHandler forLoopHandler = new ForLoopHandler();
+			forLoopHandler.setMethod(method);
+			forLoopHandler.init();
+			this.loopParallelCode = this.loopParallelCode
+					+ forLoopHandler.getModifiedMethod();
+		}
+		System.out.println(loopParallelCode);
 		this.otherMethods = "";
 		for (MethodDeclaration method : otherMethods) {
 			this.otherMethods = this.otherMethods + method.toString();
@@ -101,7 +121,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 				+ "import java.util.concurrent.Executors;" + "\n"
 				+ "import java.util.concurrent.Future;";
 		String src = "package " + packageName + ";" + "\n" + imports +execImports+ "\n "
-				+ "public class " + n + "{" + taskParallelCode + otherMethods
+				+ "public class " + n + "{"+fieldDeclarations + taskParallelCode+loopParallelCode+otherMethods
 				+ "}";
 		return src;
 
@@ -116,7 +136,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		for (IPackageFragment fr : fragments) {
 			if (fr.getKind() == IPackageFragmentRoot.K_SOURCE) {
 				for (ICompilationUnit unit : fr.getCompilationUnits()) {
-					System.out.println(unit.getElementName());
+					//System.out.println(unit.getElementName());
 					// convert each classes in to parallel
 					convert(parallel, unit);
 				}
@@ -139,3 +159,4 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 	}
 
 }
+
