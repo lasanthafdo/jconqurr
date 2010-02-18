@@ -189,7 +189,7 @@ public class ForLoopHandler implements IForLoopHandler {
 		String futureSubmit = "";
 		for (int i = 0; i < tasks.size(); i++) {
 			futureSubmit = futureSubmit + "future[" + i
-					+ "]=execData.submit(new" + " task" + (i + 1) + "());"
+					+ "]=execData.submit(new" + " forLooptask" + (i + 1) + "());"
 					+ "\n";
 		}
 		String futureGet = "for(int i=0;i<" + tasks.size() + ";i++)" + "\n"
