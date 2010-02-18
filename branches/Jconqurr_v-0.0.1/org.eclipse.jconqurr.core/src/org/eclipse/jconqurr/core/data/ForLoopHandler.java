@@ -27,7 +27,7 @@ public class ForLoopHandler implements IForLoopHandler {
 		String taskCode = "";
 		int i = 1;
 		for (String s : tasks) {
-			taskCode = taskCode + taskRunnerCode("task" + i, s);
+			taskCode = taskCode + taskRunnerCode("forLooptask" + i, s);
 			i++;
 		}
 		return sheduleTasks(tasks) + "\n" + taskCode;
