@@ -86,11 +86,14 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 							}
 						}
 					}
-				} else
+				} else {
 					notAnnotatedMethods.add(method);
+				}
+
 			}
 		}
 
 	}
 
 }
+
