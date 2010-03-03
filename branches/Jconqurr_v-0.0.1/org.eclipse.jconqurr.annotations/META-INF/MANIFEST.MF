@@ -9,3 +9,9 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
+Export-Package: org,
+ org.eclipse,
+ org.eclipse.jconqurr,
+ org.eclipse.jconqurr.annotations,
+ org.eclipse.jconqurr.annotations.library,
+ org.eclipse.jconqurr.annotations.processors
