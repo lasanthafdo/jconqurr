@@ -1,5 +1,6 @@
 package org.eclipse.jconqurr.core;
 
+import java.util.HashMap;
 import java.util.List;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -39,4 +40,6 @@ public interface ICompilationUnitFilter {
 	 * @return  List<MethodDeclaration> 
 	 */
 	public List<MethodDeclaration> getNotAnnotatedMethods();
+	
+	public List<HashMap<String,MethodDeclaration>> getAnnotatedDivideAndConquer();
 }
