@@ -31,6 +31,7 @@ public class BuildJconqurrProj implements IBuildJconqurrProjManager {
 				description.setNatureIds(new String[] { JavaCore.NATURE_ID });
 				project.setDescription(description, null);
 				// set the build path
+				 
 				IJavaProject javaProject = JavaCore.create(project);
 				IClasspathEntry[] buildPath = {
 						JavaCore.newSourceEntry(project.getFullPath().append(
