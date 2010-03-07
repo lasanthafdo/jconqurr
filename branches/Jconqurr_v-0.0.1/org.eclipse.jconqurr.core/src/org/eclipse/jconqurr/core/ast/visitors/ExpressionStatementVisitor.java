@@ -9,6 +9,7 @@ import org.eclipse.jdt.core.dom.InfixExpression;
 
 public class ExpressionStatementVisitor extends ASTVisitor {
 	List<ExpressionStatement> expressionStatements = new ArrayList<ExpressionStatement>();
+	
 	private String operator;
 	@Override
 	public boolean visit(ExpressionStatement node) {
