@@ -41,5 +41,15 @@ public interface ICompilationUnitFilter {
 	 */
 	public List<MethodDeclaration> getNotAnnotatedMethods();
 	
+	/**
+	 * returns the list of methods which annotated with divideAndConquer annotation
+	 * @return
+	 */
 	public List<HashMap<String,MethodDeclaration>> getAnnotatedDivideAndConquer();
+
+	/**
+	 * returns the methods which annotated with GPU annotation
+	 * @return
+	 */
+	public List<MethodDeclaration> getAnnotatedGPUMethods();
 }

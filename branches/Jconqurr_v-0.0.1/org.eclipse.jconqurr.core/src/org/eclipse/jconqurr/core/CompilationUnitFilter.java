@@ -7,6 +7,8 @@ import java.util.List;
 import org.eclipse.jconqurr.core.ast.visitors.AnnotationVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.MethodInvocationVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.MethodVisitor;
+import org.eclipse.jconqurr.core.dependency.DependencyAnalyser;
+import org.eclipse.jconqurr.core.dependency.IDependencyAnalyser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IAnnotationBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
@@ -21,11 +23,17 @@ import org.eclipse.jdt.core.dom.MethodInvocation;
  */
 public class CompilationUnitFilter implements ICompilationUnitFilter {
 	private CompilationUnit compilationUnit;
-	private List<MethodDeclaration> annotatedTaskMethods = new ArrayList();
-	private List<MethodDeclaration> annotatedLoopMethods = new ArrayList();
-	private List<MethodDeclaration> notAnnotatedMethods = new ArrayList();
+	private List<MethodDeclaration> annotatedTaskMethods = new ArrayList<MethodDeclaration>();
+	private List<MethodDeclaration> annotatedLoopMethods = new ArrayList<MethodDeclaration>();
+	private List<MethodDeclaration> notAnnotatedMethods = new ArrayList<MethodDeclaration>();
 	private List<HashMap<String, MethodDeclaration>> annotatedDivideAndConquer = new ArrayList<HashMap<String, MethodDeclaration>>();
-
+	private List<MethodDeclaration> annotatedGPUMethods=new ArrayList<MethodDeclaration>();
+	
+	public List<MethodDeclaration> getAnnotatedGPUMethods(){
+		System.out.println(annotatedGPUMethods.size());
+		return annotatedGPUMethods;
+	}
+	
 	/**
 	 * @see ICompilationUnitFilter#getAnnotatedParallelForMethods
 	 */
@@ -74,7 +82,9 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 		MethodVisitor methodVisitor = new MethodVisitor();
 		AnnotationVisitor annotationVisitor = new AnnotationVisitor();
 		compilationUnit.accept(methodVisitor);
+		IDependencyAnalyser analyser=new DependencyAnalyser();
 		for (MethodDeclaration method : methodVisitor.getMethods()) {
+			analyser.filterStatements(method);
 			IMethodBinding mb = method.resolveBinding();
 			if (mb != null) {
 				IAnnotationBinding[] ab = mb.getAnnotations();
@@ -87,7 +97,12 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 							} else if (ab[i].getAnnotationType().getName()
 									.trim().equals("ParallelFor")) {
 								annotatedLoopMethods.add(method);
-							} else if (ab[i].getAnnotationType().getName()
+							}  else if (ab[i].getAnnotationType().getName()
+									.trim().equals("GPU")) {
+								annotatedGPUMethods.add(method);
+							} 
+							
+							else if (ab[i].getAnnotationType().getName()
 									.trim().startsWith("DivideAndConquer")) {
 								HashMap<String, MethodDeclaration> divideAndConquer = new HashMap<String, MethodDeclaration>();
 								divideAndConquer.put("caller", method);
