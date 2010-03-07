@@ -6,14 +6,20 @@ import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.Assignment.Operator;
 
 public class AssignmentVisitor extends ASTVisitor {
 	private Expression leftHandSide;
+	private Operator operator;
+	private Expression rightHandSide;
 	/**
 	 * @return the leftHandSide
 	 */
 	public Expression getLeftHandSide() {
 		return leftHandSide;
+	}
+	public Operator getOperator(){
+		return operator;
 	}
 	/**
 	 * @return the rightHandSide
@@ -21,10 +27,11 @@ public class AssignmentVisitor extends ASTVisitor {
 	public Expression getRightHandSide() {
 		return rightHandSide;
 	}
-	private Expression rightHandSide;
+	
 	public boolean visit(Assignment node) {
 		leftHandSide=node.getLeftHandSide();
 		rightHandSide=node.getRightHandSide();
+		operator=node.getOperator();
 		if (node.getLeftHandSide() instanceof SimpleName) {
 			//System.out.println(node.toString());
 			//System.out.println(node.getLeftHandSide());
