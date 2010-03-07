@@ -1,16 +1,21 @@
 package org.eclipse.jconqurr.core.gpu;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.jconqurr.core.HandleProjectParallelism;
 import org.eclipse.jconqurr.core.ast.visitors.AssignmentVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.ExpressionStatementVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.ForLoopVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.InfixExpressionVisitor;
+import org.eclipse.jconqurr.core.ast.visitors.SimpleNameVisitor;
+import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.ForStatement;
+import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 
 public class GPUHandler implements IGPUHandler {
@@ -19,105 +24,21 @@ public class GPUHandler implements IGPUHandler {
 	private String cubinFileName = "JCudaCubinSample_kernel.cu";
 	private String cuMethodArguments;
 	private String gloabalOutPut;
+	private String noThreds;
+	private String updater;
+	private String leftOperandForCondition;
+	private String rightOperandForCondition;
+	private String operatorForCondition;
+	private String initializer;
+	private List<String> globalInputs = new ArrayList<String>();
 
-	private String getDriverInitializationCode() {
-
-		String initializationCode = " JCudaDriver.cuInit(0);" + "\n"
-				+ "CUcontext pctx = new CUcontext();" + "\n"
-				+ "CUdevice dev = new CUdevice();" + "\n"
-				+ " JCudaDriver.cuDeviceGet(dev, 0);" + "\n"
-				+ " JCudaDriver.cuCtxCreate(pctx, 0, dev);" + "\n";
-		return initializationCode;
-	}
-
-	private String loadCubinCode() {
-		String loadCubin = "CUmodule module = new CUmodule();" + "\n"
-				+ " JCudaDriver.cuModuleLoad(module, cubinFileName);" + "\n";
-		return loadCubin;
-	}
-
-	private String getFunctionPointer() {
-		String funcPointer = "CUfunction function = new CUfunction();"
-				+ "\n"
-				+ "JCudaDriver.cuModuleGetFunction(function, module, \"sampleKernel\");";
-		return funcPointer;
-	}
-
+	
 	private String getCubinFileDeclaration() {
 		String cubinDeclaraion = "String cubinFileName = prepareCubinFile(\""
 				+ cubinFileName + "\");";
 		return cubinDeclaraion;
 	}
-
-	private String getToByteArrayCode() {
-		String toByteArrayCode = "private static byte[] toByteArray(InputStream inputStream) throws IOException"
-				+ "{"
-				+ "\n"
-				+ "ByteArrayOutputStream baos = new ByteArrayOutputStream();\n"
-				+ " byte buffer[] = new byte[8192];\n"
-				+ "while (true)\n"
-				+ "{\n"
-				+ "int read = inputStream.read(buffer);\n"
-				+ "if (read == -1)\n"
-				+ "{\n"
-				+ "break;\n"
-				+ "}\n"
-				+ "baos.write(buffer, 0, read);\n"
-				+ "}\n"
-				+ "return baos.toByteArray();\n" + "}";
-		return toByteArrayCode;
-	}
-
-	private String getPrepareCubinFileCode() {
-		String prepareCubinFileCode = " private static String prepareCubinFile(String cuFileName) throws IOException"
-				+ "\n"
-				+ "{\n"
-				+ "  int endIndex = cuFileName.lastIndexOf('.');"
-				+ "\n"
-				+ "  if (endIndex == -1)"
-				+ "\n"
-				+ " {\n"
-				+ "endIndex = cuFileName.length()-1;"
-				+ "}"
-				+ "String cubinFileName = cuFileName.substring(0, endIndex+1)+\"cubin\";"
-				+ " File cubinFile = new File(cubinFileName);"
-				+ " if (cubinFile.exists())"
-				+ " {"
-				+ "return cubinFileName;"
-				+ "}"
-				+ "File cuFile = new File(cuFileName);"
-				+ " if (!cuFile.exists())"
-				+ "{"
-				+ "throw new IOException(\"Input file not found: \"+cuFileName);"
-				+ "}"
-				+ "String modelString = \"-m\"+System.getProperty(\"sun.arch.data.model\");"
-				+ " String command ="
-				+ " \"nvcc \" + modelString +\" -arch sm_11 -cubin \"+"
-				+ "cuFile.getPath()+\" -o \"+cubinFileName;"
-				+ "System.out.println(\"Executing\n\"+command);"
-				+ "Process process = Runtime.getRuntime().exec(command);"
-				+ "String errorMessage = new String(toByteArray(process.getErrorStream()));"
-				+ "String outputMessage = new String(toByteArray(process.getInputStream()));"
-				+ "int exitValue = 0;"
-				+ "try"
-				+ "{"
-				+ "exitValue = process.waitFor();"
-				+ "}"
-				+ "catch (InterruptedException e)"
-				+ "{"
-				+ "Thread.currentThread().interrupt();"
-				+ "throw new IOException(\"Interrupted while waiting for nvcc output\", e);"
-				+ "}"
-				+ " System.out.println(\"nvcc process exitValue \"+exitValue);"
-				+ "if (exitValue != 0)"
-				+ "{"
-				+ " System.out.println(\"errorMessage:\n\"+errorMessage);"
-				+ "System.out.println(\"outputMessage:\n\"+outputMessage);"
-				+ "throw new IOException(\"Could not create .cubin file: \"+errorMessage);"
-				+ "}" + "return cubinFileName;" + "}";
-		return prepareCubinFileCode;
-	}
-
+	 
 	@Override
 	public void process() {
 		System.out.println("Called the process.......................");
@@ -129,14 +50,17 @@ public class GPUHandler implements IGPUHandler {
 			List initialisers = s.initializers();
 			Expression expression = s.getExpression();
 			List updaters = s.updaters();
-
+			initializer="";
 			for (Object obj : initialisers) {
+				initializer=initializer+((Expression) obj).toString();
 				System.out.println("Initializers :"
 						+ ((Expression) obj).toString());
 			}
+			updater="";
 			for (Object obj : updaters) {
 				System.out
 						.println("Updaters: " + ((Expression) obj).toString());
+				updater=updater+((Expression) obj).toString();
 			}
 			System.out.println("Expression: " + expression.toString());
 			InfixExpressionVisitor infixVisitor = new InfixExpressionVisitor();
@@ -145,9 +69,13 @@ public class GPUHandler implements IGPUHandler {
 					.println("Left operand:" + infixVisitor.getLeftHandSide());
 			System.out.println("Condition operand: "
 					+ infixVisitor.getOperator());
-			System.out.println("Right operand: "
+			leftOperandForCondition=infixVisitor.getLeftHandSide();
+			operatorForCondition=infixVisitor.getOperator();
+			rightOperandForCondition=infixVisitor.getRightHandSide();
+			System.out.println("Right operand & no of threads: "
 					+ infixVisitor.getRightHandSide());
-
+			noThreds = infixVisitor.getRightHandSide();
+			 
 			System.out.println("Body:" + s.getBody());
 			s.getBody();
 			ExpressionStatementVisitor expVisitior = new ExpressionStatementVisitor();
@@ -160,70 +88,141 @@ public class GPUHandler implements IGPUHandler {
 						+ asignVisitor.getLeftHandSide());
 				if (asignVisitor.getLeftHandSide().getNodeType() == Assignment.ARRAY_ACCESS) {
 					System.out.println("array access");
-					// String[]
-					// array=asignVisitor.getLeftHandSide().toString().split("[");
-					int count = 0;
-					int lenght = asignVisitor.getLeftHandSide().toString()
-							.length();
-					String leftHandSide = asignVisitor.getLeftHandSide()
-							.toString();
-					for (int l = 0; l < lenght; l++) {
-						if (leftHandSide.charAt(l) == '[') {
-							count++;
-						}
-					}
-					if(count>0){
-						String pointer="";
-						for(int h=0;h<count;h++){
-							pointer=pointer+"*";
-						}
-						gloabalOutPut="float"+pointer+" globalOutputData";
-						 System.out.println(gloabalOutPut);
-					}
-					 
-					 
-					// System.out.println(array[0]);
-					// if(array.length==2){
-					// gloabalOutPut="float* globalOutputData";
-					// System.out.println(gloabalOutPut);
-					// }
+					ArrayAccess arrayAccess = (ArrayAccess) asignVisitor
+							.getLeftHandSide();
+					gloabalOutPut = getVariablePointer(asignVisitor
+							.getLeftHandSide().toString(), gloabalOutPut,
+							arrayAccess.resolveTypeBinding().getName());
 				}
 				System.out.println("Right hand side: "
 						+ asignVisitor.getRightHandSide());
+				infixVisitor.getInfixExpressions().clear();
+				asignVisitor.getRightHandSide().accept(infixVisitor);
+				infixVisitor.getLeftHandSide();
+				System.out.println(infixVisitor.getLeftHandSide());
+
+				infixVisitor.getRightHandSide();
+				System.out.println(infixVisitor.getRightHandSide());
+				for (InfixExpression in : infixVisitor.getInfixExpressions()) {
+					System.out.println(in.getLeftOperand());
+					if (in.getLeftOperand().getNodeType() == Assignment.ARRAY_ACCESS) {
+						in.getLeftOperand().resolveTypeBinding();
+						ArrayAccess arrayAccess = (ArrayAccess) in
+								.getLeftOperand();
+						SimpleNameVisitor simpleNameVisitor = new SimpleNameVisitor();
+						arrayAccess.accept(simpleNameVisitor);
+						String identifier = simpleNameVisitor.getIdentifier();
+						System.out.println(arrayAccess.resolveTypeBinding()
+								.getName()
+								+ "-------------");
+
+						globalInputs.add(getVariablePointer(in.getLeftOperand()
+								.toString(), identifier, arrayAccess
+								.resolveTypeBinding().getName()));
+						arrayAccess.getArray().accept(simpleNameVisitor);
+
+					}
+					if (in.getRightOperand().getNodeType() == Assignment.ARRAY_ACCESS) {
+						in.getLeftOperand().resolveTypeBinding();
+						ArrayAccess arrayAccess = (ArrayAccess) in
+								.getRightOperand();
+						SimpleNameVisitor simpleNameVisitor = new SimpleNameVisitor();
+						arrayAccess.accept(simpleNameVisitor);
+						System.out.println(arrayAccess.resolveTypeBinding()
+								.toString());
+						String identifier = simpleNameVisitor.getIdentifier();
+						System.out.println(arrayAccess.resolveTypeBinding()
+								.getName()
+								+ "-------------");
+
+						globalInputs.add(getVariablePointer(in
+								.getRightOperand().toString(), identifier,
+								arrayAccess.resolveTypeBinding().getName()));
+						arrayAccess.getArray().accept(simpleNameVisitor);
+
+					}
+					System.out.println(in.getOperator());
+					System.out.println(in.getRightOperand());
+					System.out.println("gloabal inputs.......................");
+					for (String g : globalInputs) {
+						System.out.println(g);
+					}
+				}
 				asignVisitor.getRightHandSide();
 			}
-
-			System.out.println(s.toString());
-			// writeToCUFile(s);
+			writeToCUFile(s);
 		}
 		System.out.println("end the process.......................");
 	}
 
+	private String getVariablePointer(String exp, String name, String type) {
+		int count = 0;
+		int lenght = exp.length();
+		String leftHandSide = exp;
+		String pointerVariable = "";
+		String identifier = "";
+		for (int l = 0; l < lenght; l++) {
+			if (leftHandSide.charAt(l) == '[') {
+				if (count > 0) {
+					count++;
+				} else {
+					identifier = exp.substring(0, l);
+					count++;
+				}
+			}
+		}
+		if (count > 0) {
+			String pointer = "";
+			for (int h = 0; h < count; h++) {
+				pointer = pointer + "*";
+			}
+			pointerVariable = type + pointer + " " + identifier;
+			System.out.println(pointerVariable);
+		}
+		return pointerVariable;
+	}
+
 	@Override
 	public void setMethod(MethodDeclaration method) {
-		// TODO Auto-generated method stub
 		this.method = method;
 	}
 
 	private void writeToCUFile(ForStatement s) {
 		FileOutputStream fout;
-
+		System.out.println(HandleProjectParallelism.getSrcPath());
+		String cuFile = getCuDeclaration() + getCuFileBody();
 		try {
-			fout = new FileOutputStream("F:\\aaa77.cu");
-			new PrintStream(fout).println(s.toString());
+			String path = HandleProjectParallelism.getSrcPath() + "/simple.cu";
+			fout = new FileOutputStream(path);
+			System.out.println(path);
+			new PrintStream(fout).println(cuFile);
 			fout.close();
+			System.out.println("No Exception Occured");
 		} catch (IOException e) {
 			System.err.println("Unable to write to file: " + e.getMessage());
 		}
-
-		/*
-		 * try { FileWriter fstream = new
-		 * FileWriter("C:\\Users\\Lahiru\\Desktop\\abbb77.txt"); BufferedWriter
-		 * out = new BufferedWriter(fstream); out.write("Hello Java");
-		 * out.close(); } catch (Exception e) { System.err.println("Error: " +
-		 * e.getMessage()); }
-		 */
+	}
+	
+	private String getCuDeclaration() {
+		String decl = "extern \"C\"\n" + "__global__ void sampleKernel(";
+		String inputArg = "";
+		for (String s : globalInputs) {
+			inputArg = inputArg + "," + s;
+		}
+		String arg = gloabalOutPut + inputArg;
+		return decl + arg + ")";
 
 	}
 
+	private String getCuFileBody() {
+		String variabels = "const unsigned int tidX = threadIdx.x;" + "\n"
+				+ "globalOutputData[tidX] = 0;" + "\n";
+		String body = "C[tidX]=A[tidx]+B[tidx];\n";
+		String sync = "__syncthreads();";
+		return "{" + variabels + body + sync + "}";
+	}
+ 
+	public String getModifiedCode(){
+		return JCUDABinding.getTobytearraycode()+JCUDABinding.getGetpreparecubinfilecode();
+	}
 }

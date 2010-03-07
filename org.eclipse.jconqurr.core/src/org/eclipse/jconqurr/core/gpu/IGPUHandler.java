@@ -6,4 +6,6 @@ public interface IGPUHandler {
 	public void setMethod(MethodDeclaration method);
 
 	public void process();
+	
+	public String getModifiedCode();
 }
