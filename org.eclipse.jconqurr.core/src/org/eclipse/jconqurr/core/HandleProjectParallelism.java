@@ -14,6 +14,8 @@ import org.eclipse.jconqurr.core.data.ForLoopHandler;
 import org.eclipse.jconqurr.core.data.IForLoopHandler;
 import org.eclipse.jconqurr.core.divideandconquer.DivideAndConquerHandler;
 import org.eclipse.jconqurr.core.divideandconquer.IDivideAndConquerHandler;
+import org.eclipse.jconqurr.core.gpu.GPUHandler;
+import org.eclipse.jconqurr.core.gpu.IGPUHandler;
 import org.eclipse.jconqurr.core.task.ITaskMethod;
 import org.eclipse.jconqurr.core.task.TaskMethod;
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -47,6 +49,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 	private String otherMethods;
 	private String fieldDeclarations;
 	private String divideAndConquerCode;
+	private String gpuCode;
 
 	/**
 	 * @see HandleProjectParallelism#convert(IJavaProject, ICompilationUnit)
@@ -60,6 +63,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		setTaskParallelCode(filter.getAnnotatedParallelTaskMethods());
 		setLoopParallelCode(filter.getAnnotatedParallelForMethods());
 		setDivideAndConquerCode(filter.getAnnotatedDivideAndConquer());
+		setGPUCode(filter.getAnnotatedGPUMethods());
 		setOtherMethods(filter.getNotAnnotatedMethods());
 		setClassName(unit.getElementName());
 		setImports(unit);
@@ -155,6 +159,14 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		}
 	}
 
+	private void setGPUCode(List<MethodDeclaration> gpuMethods){
+		this.gpuCode="";
+		for(MethodDeclaration method:gpuMethods){
+			IGPUHandler gpuHandler=new GPUHandler();
+			gpuHandler.setMethod(method);
+			gpuHandler.process();
+		}
+	}
 	/**
 	 * sets the loop parallel code
 	 * @param loopParallelMethods
@@ -284,8 +296,6 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		} catch (MalformedTreeException e) {
 			e.printStackTrace();
 		}
-		// display the formatted string on the System out
-		System.out.println(document.get());
 		return document.get();
 	}
 
