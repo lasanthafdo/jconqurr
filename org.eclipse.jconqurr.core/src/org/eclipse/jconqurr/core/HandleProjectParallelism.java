@@ -50,11 +50,18 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 	private String fieldDeclarations;
 	private String divideAndConquerCode;
 	private String gpuCode;
+	private static String srcPath;
 
+	public static String getSrcPath(){
+		return srcPath;
+	}
 	/**
 	 * @see HandleProjectParallelism#convert(IJavaProject, ICompilationUnit)
 	 */
 	public void convert(IJavaProject parallel, ICompilationUnit unit) {
+		IProject project = parallel.getProject();
+		IFolder folder = project.getFolder("src");
+		srcPath=folder.getLocation().toOSString();
 		CompilationUnit cu = parse(unit);
 		ICompilationUnitFilter filter = new CompilationUnitFilter();
 		filter.setCompilationUnit(cu);
@@ -68,8 +75,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		setClassName(unit.getElementName());
 		setImports(unit);
 
-		IProject project = parallel.getProject();
-		IFolder folder = project.getFolder("src");
+		
 		IPackageFragmentRoot srcFolder = parallel
 				.getPackageFragmentRoot(folder);
 		try {
@@ -138,7 +144,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		String src = "package " + packageName + ";" + "\n" + imports
 				+ execImports + divideAndConqerImports + "\n "
 				+ "public class " + n + "{" + fieldDeclarations
-				+ taskParallelCode + loopParallelCode + divideAndConquerCode
+				+ taskParallelCode + loopParallelCode + divideAndConquerCode+gpuCode
 				+ otherMethods + "}";
 		return src;
 
@@ -165,6 +171,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 			IGPUHandler gpuHandler=new GPUHandler();
 			gpuHandler.setMethod(method);
 			gpuHandler.process();
+			//this.gpuCode=this.gpuCode+gpuHandler.getModifiedCode();
 		}
 	}
 	/**
