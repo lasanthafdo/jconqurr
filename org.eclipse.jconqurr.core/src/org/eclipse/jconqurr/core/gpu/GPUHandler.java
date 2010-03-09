@@ -6,22 +6,27 @@ import java.util.List;
 
 import org.eclipse.jconqurr.core.HandleProjectParallelism;
 import org.eclipse.jconqurr.core.ast.visitors.AssignmentVisitor;
+import org.eclipse.jconqurr.core.ast.visitors.BlockVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.ExpressionStatementVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.ForLoopVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.InfixExpressionVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.SimpleNameVisitor;
 import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.Assignment;
+import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.ForStatement;
+import org.eclipse.jdt.core.dom.IExtendedModifier;
 import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.Statement;
 
 public class GPUHandler implements IGPUHandler {
 
 	private MethodDeclaration method;
-	
+
 	private String gloabalOutPut;
 	private String leftOperandOfBodyStatement;
 	private String rightOperandOfBodyStatement;
@@ -35,6 +40,12 @@ public class GPUHandler implements IGPUHandler {
 	private final String tidx = "tidx";
 	private final String cubinFileName = "simple.cu";
 	private List<String> globalInputs = new ArrayList<String>();
+	private List<String> identifiers = new ArrayList<String>();
+	private String outPutIdentifier;
+	private String leftOperator;
+	private String returnType;
+	private String modifier;
+	private String newBody;
 
 	private String getCubinFileDeclaration() {
 		String cubinDeclaraion = "String cubinFileName = prepareCubinFile(\""
@@ -52,111 +63,42 @@ public class GPUHandler implements IGPUHandler {
 		for (ForStatement s : forLoops) {
 			handleLoopDeclaration(s);
 			handleLoopBody(s);
-			/*
-			 * List initialisers = s.initializers(); Expression expression =
-			 * s.getExpression(); List updaters = s.updaters(); initializer =
-			 * ""; for (Object obj : initialisers) { initializer = initializer +
-			 * ((Expression) obj).toString();
-			 * System.out.println("Initializers :" + ((Expression)
-			 * obj).toString()); } updater = ""; for (Object obj : updaters) {
-			 * System.out .println("Updaters: " + ((Expression)
-			 * obj).toString()); updater = updater + ((Expression)
-			 * obj).toString(); } InfixExpressionVisitor infixVisitor = new
-			 * InfixExpressionVisitor(); expression.accept(infixVisitor);
-			 * 
-			 * System.out.println("Expression: " + expression.toString());
-			 * System.out .println("Left operand:" +
-			 * infixVisitor.getLeftHandSide());
-			 * System.out.println("Condition operand: " +
-			 * infixVisitor.getOperator());
-			 * 
-			 * leftOperandForCondition = infixVisitor.getLeftHandSide();
-			 * operatorForCondition = infixVisitor.getOperator();
-			 * rightOperandForCondition = infixVisitor.getRightHandSide();
-			 * noThreds = infixVisitor.getRightHandSide();
-			 * 
-			 * System.out.println("Right operand & no of threads: " +
-			 * infixVisitor.getRightHandSide());
-			 */
-			// ///////////////////////////////////////////////////
-
-			/*
-			 * InfixExpressionVisitor infixVisitor = new
-			 * InfixExpressionVisitor();
-			 * 
-			 * ExpressionStatementVisitor expVisitior = new
-			 * ExpressionStatementVisitor(); s.getBody().accept(expVisitior);
-			 * 
-			 * for (ExpressionStatement ex :
-			 * expVisitior.getExpressionStatements()) { AssignmentVisitor
-			 * asignVisitor = new AssignmentVisitor(); ex.accept(asignVisitor);
-			 * asignVisitor.getLeftHandSide();
-			 * System.out.println("Left hand Side: " +
-			 * asignVisitor.getLeftHandSide()); operatorOfBodyStatement =
-			 * asignVisitor.getOperator().toString(); if
-			 * (asignVisitor.getLeftHandSide().getNodeType() ==
-			 * Assignment.ARRAY_ACCESS) { System.out.println("array access");
-			 * ArrayAccess arrayAccess = (ArrayAccess) asignVisitor
-			 * .getLeftHandSide(); gloabalOutPut =
-			 * getVariablePointer(asignVisitor .getLeftHandSide().toString(),
-			 * gloabalOutPut, arrayAccess.resolveTypeBinding().getName());
-			 * leftOperandOfBodyStatement = getModifiedArray(asignVisitor
-			 * .getLeftHandSide().toString()); }
-			 * System.out.println("Right hand side: " +
-			 * asignVisitor.getRightHandSide());
-			 * infixVisitor.getInfixExpressions().clear();
-			 * asignVisitor.getRightHandSide().accept(infixVisitor);
-			 * infixVisitor.getLeftHandSide();
-			 * System.out.println(infixVisitor.getLeftHandSide());
-			 * 
-			 * infixVisitor.getRightHandSide();
-			 * System.out.println(infixVisitor.getRightHandSide()); for
-			 * (InfixExpression in : infixVisitor.getInfixExpressions()) {
-			 * System.out.println(in.getLeftOperand()); if
-			 * (in.getLeftOperand().getNodeType() == Assignment.ARRAY_ACCESS) {
-			 * in.getLeftOperand().resolveTypeBinding();
-			 * rightOperandOfBodyStatement = getModifiedArray(in
-			 * .getLeftOperand().toString()); ArrayAccess arrayAccess =
-			 * (ArrayAccess) in .getLeftOperand(); SimpleNameVisitor
-			 * simpleNameVisitor = new SimpleNameVisitor();
-			 * arrayAccess.accept(simpleNameVisitor); String identifier =
-			 * simpleNameVisitor.getIdentifier();
-			 * System.out.println(arrayAccess.resolveTypeBinding() .getName() +
-			 * "-------------");
-			 * 
-			 * globalInputs.add(getVariablePointer(in.getLeftOperand()
-			 * .toString(), identifier, arrayAccess
-			 * .resolveTypeBinding().getName()));
-			 * arrayAccess.getArray().accept(simpleNameVisitor);
-			 * 
-			 * } rightOperandOfBodyStatement = rightOperandOfBodyStatement +
-			 * in.getOperator(); if (in.getRightOperand().getNodeType() ==
-			 * Assignment.ARRAY_ACCESS) {
-			 * in.getLeftOperand().resolveTypeBinding(); ArrayAccess arrayAccess
-			 * = (ArrayAccess) in .getRightOperand(); SimpleNameVisitor
-			 * simpleNameVisitor = new SimpleNameVisitor();
-			 * arrayAccess.accept(simpleNameVisitor);
-			 * System.out.println(arrayAccess.resolveTypeBinding() .toString());
-			 * String identifier = simpleNameVisitor.getIdentifier();
-			 * System.out.println(arrayAccess.resolveTypeBinding() .getName() +
-			 * "-------------"); rightOperandOfBodyStatement =
-			 * rightOperandOfBodyStatement +
-			 * getModifiedArray(in.getRightOperand() .toString());
-			 * globalInputs.add(getVariablePointer(in
-			 * .getRightOperand().toString(), identifier,
-			 * arrayAccess.resolveTypeBinding().getName()));
-			 * arrayAccess.getArray().accept(simpleNameVisitor);
-			 * 
-			 * } System.out.println(in.getOperator());
-			 * System.out.println(in.getRightOperand());
-			 * System.out.println("gloabal inputs......................."); for
-			 * (String g : globalInputs) { System.out.println(g); } }
-			 * asignVisitor.getRightHandSide(); }
-			 */
 			writeToCUFile(s);
-			// System.out.println(getModifiedCode());
 		}
+		handleMethodBody();
 		System.out.println("end the process.......................");
+	}
+
+	private String getGpuCode() {
+
+		String prepareCubinFile = "String cubinFileName = prepareCubinFile(\""
+				+ cubinFileName + "\");\n";
+		String malloc = "";
+		for (String s : identifiers) {
+			malloc = malloc + JCUDABinding.getMemAllocFor2DHostVariablesCode(s);
+		}
+		String content = "";
+		for (String s : identifiers) {
+			content = content
+					+ JCUDABinding.getCopyContentsFor2DHostVariablesCode(s);
+		}
+		String numTHreads = "int numThreads=" + noThreds + ";\n";
+
+		String gpu = "try{"
+				+ prepareCubinFile
+				+ JCUDABinding.getDriverinitializationcode()
+				+ JCUDABinding.getLoadcubincode()
+				+ numTHreads
+				+ JCUDABinding.getFunctionpointercode()
+				+ malloc
+				+ content
+				+ JCUDABinding
+						.getMemAllocDeviceOutputVariablesCode(outPutIdentifier)
+				+ JCUDABinding.getExePrametersCode(identifiers.get(0),
+						identifiers.get(1), outPutIdentifier)
+				+ JCUDABinding.getMemAllocForHostOutputCode(outPutIdentifier)
+				+ "\n" + "}" + "catch (IOException e) {}";
+		return gpu;
 	}
 
 	private void handleLoopBody(ForStatement s) {
@@ -167,27 +109,21 @@ public class GPUHandler implements IGPUHandler {
 			AssignmentVisitor asignVisitor = new AssignmentVisitor();
 			ex.accept(asignVisitor);
 			asignVisitor.getLeftHandSide();
-			System.out.println("Left hand Side: "
-					+ asignVisitor.getLeftHandSide());
 			operatorOfBodyStatement = asignVisitor.getOperator().toString();
 			if (asignVisitor.getLeftHandSide().getNodeType() == Assignment.ARRAY_ACCESS) {
-				System.out.println("array access");
 				ArrayAccess arrayAccess = (ArrayAccess) asignVisitor
 						.getLeftHandSide();
 				gloabalOutPut = getVariablePointer(asignVisitor
 						.getLeftHandSide().toString(), gloabalOutPut,
 						arrayAccess.resolveTypeBinding().getName());
+				leftOperator = asignVisitor.getLeftHandSide().toString();
 				leftOperandOfBodyStatement = getModifiedArray(asignVisitor
 						.getLeftHandSide().toString());
 			}
-			System.out.println("Right hand side: "
-					+ asignVisitor.getRightHandSide());
 			infixVisitor.getInfixExpressions().clear();
 			asignVisitor.getRightHandSide().accept(infixVisitor);
 			infixVisitor.getLeftHandSide();
-			System.out.println(infixVisitor.getLeftHandSide());
 			infixVisitor.getRightHandSide();
-			System.out.println(infixVisitor.getRightHandSide());
 			for (InfixExpression in : infixVisitor.getInfixExpressions()) {
 				System.out.println(in.getLeftOperand());
 				if (in.getLeftOperand().getNodeType() == Assignment.ARRAY_ACCESS) {
@@ -198,9 +134,6 @@ public class GPUHandler implements IGPUHandler {
 					SimpleNameVisitor simpleNameVisitor = new SimpleNameVisitor();
 					arrayAccess.accept(simpleNameVisitor);
 					String identifier = simpleNameVisitor.getIdentifier();
-					System.out.println(arrayAccess.resolveTypeBinding()
-							.getName()
-							+ "-------------");
 					globalInputs.add(getVariablePointer(in.getLeftOperand()
 							.toString(), identifier, arrayAccess
 							.resolveTypeBinding().getName()));
@@ -214,12 +147,7 @@ public class GPUHandler implements IGPUHandler {
 							.getRightOperand();
 					SimpleNameVisitor simpleNameVisitor = new SimpleNameVisitor();
 					arrayAccess.accept(simpleNameVisitor);
-					System.out.println(arrayAccess.resolveTypeBinding()
-							.toString());
 					String identifier = simpleNameVisitor.getIdentifier();
-					System.out.println(arrayAccess.resolveTypeBinding()
-							.getName()
-							+ "-------------");
 					rightOperandOfBodyStatement = rightOperandOfBodyStatement
 							+ getModifiedArray(in.getRightOperand().toString());
 					globalInputs.add(getVariablePointer(in.getRightOperand()
@@ -227,14 +155,51 @@ public class GPUHandler implements IGPUHandler {
 							.resolveTypeBinding().getName()));
 					arrayAccess.getArray().accept(simpleNameVisitor);
 				}
-				System.out.println(in.getOperator());
-				System.out.println(in.getRightOperand());
-				System.out.println("gloabal inputs.......................");
-				for (String g : globalInputs) {
-					System.out.println(g);
-				}
 			}
 		}
+	}
+
+	private void handleMethodBody() {
+		String body = method.getBody().toString();
+		int d = body.indexOf("for");
+		System.out.println("a=" + d);
+		returnType = method.getReturnType2().toString();
+		modifier = "";
+		List<IExtendedModifier> modifiers = method.modifiers();
+		for (IExtendedModifier a : modifiers) {
+			if (a.isModifier()) {
+				modifier = modifier + " " + ((Modifier) a).toString();
+			}
+		}
+		BlockVisitor blockVisitor = new BlockVisitor();
+		method.accept(blockVisitor);
+		List<Block> blocks = blockVisitor.getBlocks();
+		int position = -1;
+		for (Block b : blocks) {
+			List stmt = b.statements();
+			for (int i = 0; i < stmt.size(); i++) {
+
+				if (((Statement) stmt.get(i)).getNodeType() == Statement.FOR_STATEMENT) {
+					position = method.getBody().toString().indexOf(
+							((Statement) stmt.get(i)).toString()
+									.substring(0, 5));
+					System.out.println(position);
+					stmt.remove(i);
+				}
+
+			}
+
+		}
+		System.out.println("length:"+method.getBody().toString().length());
+		System.out.println("position:"+position);
+		if(method.getBody().toString().length()==position){
+		newBody= "{"+getGpuCode()+ "}";
+		}
+		else{
+			newBody=method.getBody().toString().substring(0,position)+getGpuCode()+method.getBody().toString().substring(position, method.getBody().toString().length());
+			
+		}
+		System.out.println(method.getBody().toString().substring(0,position));
 	}
 
 	private void handleLoopDeclaration(ForStatement s) {
@@ -244,28 +209,17 @@ public class GPUHandler implements IGPUHandler {
 		initializer = "";
 		for (Object obj : initialisers) {
 			initializer = initializer + ((Expression) obj).toString();
-			System.out
-					.println("Initializers :" + ((Expression) obj).toString());
 		}
 		updater = "";
 		for (Object obj : updaters) {
-			System.out.println("Updaters: " + ((Expression) obj).toString());
 			updater = updater + ((Expression) obj).toString();
 		}
 		InfixExpressionVisitor infixVisitor = new InfixExpressionVisitor();
 		expression.accept(infixVisitor);
-
-		System.out.println("Expression: " + expression.toString());
-		System.out.println("Left operand:" + infixVisitor.getLeftHandSide());
-		System.out.println("Condition operand: " + infixVisitor.getOperator());
-
 		leftOperandForCondition = infixVisitor.getLeftHandSide();
 		operatorForCondition = infixVisitor.getOperator();
 		rightOperandForCondition = infixVisitor.getRightHandSide();
 		noThreds = infixVisitor.getRightHandSide();
-
-		System.out.println("Right operand & no of threads: "
-				+ infixVisitor.getRightHandSide());
 	}
 
 	private String getModifiedArray(String exp) {
@@ -277,6 +231,11 @@ public class GPUHandler implements IGPUHandler {
 					count++;
 				} else {
 					identifier = exp.substring(0, l);
+					if (leftOperator.startsWith(identifier)) {
+						outPutIdentifier = identifier;
+					} else {
+						identifiers.add(identifier);
+					}
 					count++;
 				}
 			}
@@ -311,7 +270,6 @@ public class GPUHandler implements IGPUHandler {
 		return pointerVariable;
 	}
 
-	
 	@Override
 	public void setMethod(MethodDeclaration method) {
 		this.method = method;
@@ -354,7 +312,9 @@ public class GPUHandler implements IGPUHandler {
 	}
 
 	public String getModifiedCode() {
-		return JCUDABinding.getTobytearraycode()
+		 
+		String method =modifier + " " + returnType + " "+ this.method.getName().toString()+"()"+ newBody;
+		return method + JCUDABinding.getTobytearraycode()
 				+ JCUDABinding.getGetpreparecubinfilecode();
 	}
 }
