@@ -160,102 +160,158 @@ public final class JCUDABinding {
 	protected static String getGetpreparecubinfilecode() {
 		return getPrepareCubinFileCode;
 	}
-	
-	protected String getMemAllocFor2DHostVariablesCode(String variableName) {
+
+	// protected static String getMemAllocFor2DHostVariablesCode(String
+	// variableName) {
+	// String hostDevicePointer = "hostDevicePointersFor_" + variableName;
+	// String comment = "//Allocate arrays on device, one for each row." + "\n"
+	// +
+	// "//The pointers to these arrays are stored in host memory." + "\n";
+	// String initCUdeviceptr = "CUdeviceptr " + hostDevicePointer +
+	// "[] = new CUdeviceptr[numThreads];" + "\n";
+	// String forLoop = "for(int i = 0; i < numThreads; i++) {" + "\n" +
+	// hostDevicePointer + "[i] = new CUdeviceptr();" + "\n" +
+	// "JCudaDriver.cuMemAlloc(" + hostDevicePointer +
+	// "[i], numThreads * Sizeof.INT);" + "\n" + "}";
+	//		
+	// return comment + initCUdeviceptr + forLoop;
+	// }
+	//	
+	// protected static String getCopyContentsFor2DHostVariablesCode(String
+	// variableName) {
+	// String hostDevicePointer = "hostDevicePointersFor_" + variableName;
+	// String comment =
+	// "//Copy the content of the rows from the host input data" + "\n" +
+	// "//to the device arrays that have just been allocated." + "\n";
+	// String forLoop = "for(int i = 0; i < numThreads; i++) {" + "\n" +
+	// "JCudaDriver.cuMemcpyHtoD(" + hostDevicePointer + "[i], Pointer.to(" +
+	// variableName + "), numThreads * Sizeof.INT);" + "\n" + "}";
+	// return comment + forLoop + getMemAllocForPointersCode(variableName,
+	// hostDevicePointer);
+	// }
+
+	protected static String getMemAllocFor2DHostVariablesCode(
+			String variableName) {
 		String hostDevicePointer = "hostDevicePointersFor_" + variableName;
-		String comment = "//Allocate arrays on device, one for each row." + "\n" +
-						 "//The pointers to these arrays are stored in host memory." + "\n";
-		String initCUdeviceptr = "CUdeviceptr " + hostDevicePointer + "[] = new CUdeviceptr[numThreads];" + "\n";
-		String forLoop = "for(int i = 0; i < numThreads; i++) {" + "\n" +
-						 hostDevicePointer + "[i] = new CUdeviceptr();" + "\n" +
-						 "JCudaDriver.cuMemAlloc(" + hostDevicePointer + "[i], size * Sizeof.INT);" + "\n" + "}";	
 		
-		return null;
+		String comment = "//Allocate arrays on device, one for each row."
+				+ "\n";
+		String initCUdeviceptr = "CUdeviceptr " + hostDevicePointer
+				+ " = new CUdeviceptr();" + "\n";
+		String call1 = "JCudaDriver.cuMemAlloc(" + hostDevicePointer
+				+ ", numThreads * Sizeof.INT);" + "\n" ;
+		System.out.println(comment + initCUdeviceptr + call1);
+		return comment + initCUdeviceptr + call1;
 	}
-	
-	protected String getCopyContentsFor2DHostVariablesCode(String variableName) {
+
+	protected static String getCopyContentsFor2DHostVariablesCode(
+			String variableName) {
 		String hostDevicePointer = "hostDevicePointersFor_" + variableName;
-		String comment = "//Copy the content of the rows from the host input data" + "\n" +
-						 "//to the device arrays that have just been allocated." + "\n";
-		String forLoop = "for(int i = 0; i < numThreads; i++) {" + "\n" +
-		 				 "JCudaDriver.cuMemcpyHtoD(" + hostDevicePointer + "[i], Pointer.to(variableName[i]), size * Sizeof.INT);" + "\n" + "}";
-		return null;
+		String comment = "//Copy the content of the rows from the host input data"
+				+ "\n"
+				+ "//to the device arrays that have just been allocated."
+				+ "\n";
+		String call1 = "JCudaDriver.cuMemcpyHtoD(" + hostDevicePointer
+				+ ", Pointer.to(" + variableName
+				+ "), numThreads * Sizeof.INT);" + "\n" ;
+		return comment + call1
+				+ getMemAllocForPointersCode(variableName, hostDevicePointer);
 	}
-	
-	protected String getMemAllocForPointersCode(String variableName, String pointerName) {
+
+	protected static String getMemAllocForPointersCode(String variableName,
+			String pointerName) {
 		String deviceInput = "deviceInputFor_" + variableName;
-		String comment = "//Allocate device memory for the array pointers," + "\n" +
-		 				 "//and copy the array pointers from the host to the device." + "\n";
-		String initDeviceInput = "CUdeviceptr " + deviceInput + " = new CUdeviceptr();" + "\n";
-		String call1 = "JCudaDriver.cuMemAlloc(" + deviceInput + ", numThreads * Sizeof.POINTER);" + "\n";
-		String call2 = "JCudaDriver.cuMemcpyHtoD(" + deviceInput + ", Pointer.to(" + pointerName + "), numThreads * Sizeof.POINTER);" + "\n";
-		
+		String comment = "//Allocate device memory for the array pointers,"
+				+ "\n"
+				+ "//and copy the array pointers from the host to the device."
+				+ "\n";
+		String initDeviceInput = "CUdeviceptr " + deviceInput
+				+ " = new CUdeviceptr();" + "\n";
+		String call1 = "JCudaDriver.cuMemAlloc(" + deviceInput
+				+ ", numThreads * Sizeof.POINTER);" + "\n";
+		String call2 = "JCudaDriver.cuMemcpyHtoD(" + deviceInput
+				+ ", Pointer.to(" + pointerName
+				+ "), numThreads * Sizeof.POINTER);" + "\n";
+
 		return comment + initDeviceInput + call1 + call2;
 	}
-	
-	protected String getMemAllocDeviceOutputVariablesCode(String variableName) {
+
+	protected static String getMemAllocDeviceOutputVariablesCode(
+			String variableName) {
 		String deviceOutput = "deviceOutputFor_" + variableName;
-		String comment = "//Allocate device output memory: of a single column" + "\n";
-		String initdeviceOutput = "CUdeviceptr " + deviceOutput + " = new CUdeviceptr();" + "\n";
-		String call1 = "JCudaDriver.cuMemAlloc(" + deviceOutput + ", numThreads * Sizeof.INT);" + "\n";	
-		
+		String comment = "//Allocate device output memory: of a single column"
+				+ "\n";
+		String initdeviceOutput = "CUdeviceptr " + deviceOutput
+				+ " = new CUdeviceptr();" + "\n";
+		String call1 = "JCudaDriver.cuMemAlloc(" + deviceOutput
+				+ ", numThreads * Sizeof.INT);" + "\n";
+
 		return comment + initdeviceOutput + call1;
 	}
-	
-	protected String getExePrametersCode(String InVariableName1, String InVariableName2, String OutVariableName) {
+
+	protected static String getExePrametersCode(String InVariableName1,
+			String InVariableName2, String OutVariableName) {
 		String exePrameters = "JCudaDriver.cuFuncSetBlockShape(function, numThreads, 1, 1);"
-			+ "\n"
-			+ "Pointer dIn1 = Pointer.to(deviceInputFor_" + InVariableName1 + ");"
-			+ "\n"
-			+ "Pointer dIn2 = Pointer.to(deviceInputFor_" + InVariableName2 + ");"
-			+ "\n"
-			+ "Pointer dOut = Pointer.to(deviceOutputFor_" + OutVariableName + ");"
-			+ "\n"
-			+ "Pointer pSize = Pointer.to(new int[]{size}):"
-			+ "\n"
-			+ "int offset = 0;"
-			+ "\n"
-			+ "offset = JCudaDriver.align(offset, Sizeof.POINTER);"
-			+ "\n"
-			+ "JCudaDriver.cuParamSetv(function, offset, dIn1, Sizeof.POINTER);"
-			+ "\n"
-			+ "offset += Sizeof.POINTER"
-			+ "\n"
-			+ "offset = JCudaDriver.align(offset, Sizeof.POINTER);"
-			+ "\n"
-			+ "JCudaDriver.cuParamSetv(function, offset, dIn2, Sizeof.POINTER);"
-			+ "\n"
-			+ "offset += Sizeof.POINTER"
-			+ "\n"
-			+ "offset = JCudaDriver.align(offset, Sizeof.INT);"
-			+ "\n"
-			+ "JCudaDriver.cuParamSetv(function, offset, pSize, Sizeof.INT);"
-			+ "\n"
-			+ "offset += Sizeof.INT"
-			+ "\n"
-			+ "offset = JCudaDriver.align(offset, Sizeof.POINTER);"
-			+ "\n"
-			+ "JCudaDriver.cuParamSetv(function, offset, dOut, Sizeof.POINTER);"
-			+ "\n"
-			+ "offset += Sizeof.POINTER"
-			+ "\n"
-			+ "JCudaDriver.cuParamSetv(function, offset);"
-			+ "\n"
-			+ "//Call the function"
-			+ "\n"
-			+ "JCudaDriver.cuLaunch(function);"
-			+ "\n"
-			+ "JCudaDriver.cuCtxSynchronize();"
-			+ "\n";
+				+ "\n" + "Pointer dIn1 = Pointer.to(deviceInputFor_"
+				+ InVariableName1
+				+ ");"
+				+ "\n"
+				+ "Pointer dIn2 = Pointer.to(deviceInputFor_"
+				+ InVariableName2
+				+ ");"
+				+ "\n"
+				+ "Pointer dOut = Pointer.to(deviceOutputFor_"
+				+ OutVariableName
+				+ ");"
+				+ "\n"
+				+ "Pointer pSize = Pointer.to(new int[]{numThreads});"
+				+ "\n"
+				+ "int offset = 0;"
+				+ "\n"
+				+ "offset = JCudaDriver.align(offset, Sizeof.POINTER);"
+				+ "\n"
+				+ "JCudaDriver.cuParamSetv(function, offset, dIn1, Sizeof.POINTER);"
+				+ "\n"
+				+ "offset += Sizeof.POINTER;"
+				+ "\n"
+				+ "offset = JCudaDriver.align(offset, Sizeof.POINTER);"
+				+ "\n"
+				+ "JCudaDriver.cuParamSetv(function, offset, dIn2, Sizeof.POINTER);"
+				+ "\n"
+				+ "offset += Sizeof.POINTER;"
+				+ "\n"
+				+ "offset = JCudaDriver.align(offset, Sizeof.INT);"
+				+ "\n"
+				+ "JCudaDriver.cuParamSetv(function, offset, pSize, Sizeof.INT);"
+				+ "\n"
+				+ "offset += Sizeof.INT;"
+				+ "\n"
+				+ "offset = JCudaDriver.align(offset, Sizeof.POINTER);"
+				+ "\n"
+				+ "JCudaDriver.cuParamSetv(function, offset, dOut, Sizeof.POINTER);"
+				+ "\n"
+				+ "offset += Sizeof.POINTER;"
+				+ "\n"
+				+ "JCudaDriver.cuParamSetSize(function, offset);"
+				+ "\n"
+				+ "//Call the function"
+				+ "\n"
+				+ "JCudaDriver.cuLaunch(function);"
+				+ "\n"
+				+ "JCudaDriver.cuCtxSynchronize();" + "\n";
 		return exePrameters;
 	}
-	
-	protected String getMemAllocForHostOutputCode(String outputVariableName) {
-		
-		String comment = "//Allocate host output memory and copy the device output to the host.(one dimentional)" + "\n";
-		String call1 = "JCudaDriver.cuMemcpyDtoH(Pointer.to(" + outputVariableName + "), deviceOutputFor_" + outputVariableName + ", numThreads * Sizeof.INT);" + "\n";
-		
+
+	protected static String getMemAllocForHostOutputCode(
+			String outputVariableName) {
+
+		String comment = "//Allocate host output memory and copy the device output to the host.(one dimentional)"
+				+ "\n";
+		String call1 = "JCudaDriver.cuMemcpyDtoH(Pointer.to("
+				+ outputVariableName + "), deviceOutputFor_"
+				+ outputVariableName + ", numThreads * Sizeof.INT);" + "\n";
+
 		return comment + call1;
 	}
-	
+
 }
