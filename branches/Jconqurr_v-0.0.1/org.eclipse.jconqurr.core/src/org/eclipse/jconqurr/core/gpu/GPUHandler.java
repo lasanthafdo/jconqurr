@@ -311,6 +311,7 @@ public class GPUHandler implements IGPUHandler {
 		return pointerVariable;
 	}
 
+	
 	@Override
 	public void setMethod(MethodDeclaration method) {
 		this.method = method;
@@ -321,7 +322,7 @@ public class GPUHandler implements IGPUHandler {
 		System.out.println(HandleProjectParallelism.getSrcPath());
 		String cuFile = getCuDeclaration() + getCuFileBody();
 		try {
-			String path = HandleProjectParallelism.getSrcPath() + "/simple.cu";
+			String path = HandleProjectParallelism.getSrcPath() + "\\simple.cu";
 			fout = new FileOutputStream(path);
 			System.out.println(path);
 			new PrintStream(fout).println(cuFile);
