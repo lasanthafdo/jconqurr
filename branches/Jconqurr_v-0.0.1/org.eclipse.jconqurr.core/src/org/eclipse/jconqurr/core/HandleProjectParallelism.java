@@ -86,6 +86,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 				packageName = dec[0].getElementName();
 				try {
 					String src = formatCode(generateClass());
+					 
 					ICompilationUnit cunit = fragment.createCompilationUnit(
 							className, src, true, null);
 				} catch (Exception e) {
@@ -125,6 +126,13 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 			n = n + c;
 		}
 		String execImports;
+		String gpuImports;
+		if(!(this.gpuCode.equals(""))){
+			gpuImports="import java.io.*;"+"\n"+"import jcuda.*;"+"\n"+"import jcuda.driver.*;";
+		}
+		else{
+			gpuImports="";
+		}
 		if (!(this.loopParallelCode.equals(""))
 				|| !(this.taskParallelCode.equals(""))) {
 			execImports = "import java.util.concurrent.ExecutorService;" + "\n"
@@ -142,10 +150,11 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 			divideAndConqerImports = "";
 		}
 		String src = "package " + packageName + ";" + "\n" + imports
-				+ execImports + divideAndConqerImports + "\n "
+				+ execImports + divideAndConqerImports +gpuImports+ "\n "
 				+ "public class " + n + "{" + fieldDeclarations
 				+ taskParallelCode + loopParallelCode + divideAndConquerCode+gpuCode
 				+ otherMethods + "}";
+		
 		return src;
 
 	}
@@ -171,7 +180,8 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 			IGPUHandler gpuHandler=new GPUHandler();
 			gpuHandler.setMethod(method);
 			gpuHandler.process();
-			//this.gpuCode=this.gpuCode+gpuHandler.getModifiedCode();
+			//System.out.println(gpuHandler.getModifiedCode());
+			this.gpuCode=this.gpuCode+gpuHandler.getModifiedCode();
 		}
 	}
 	/**
