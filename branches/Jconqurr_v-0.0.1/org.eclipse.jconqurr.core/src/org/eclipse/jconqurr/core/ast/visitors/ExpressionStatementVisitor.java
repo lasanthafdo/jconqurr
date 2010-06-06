@@ -17,7 +17,6 @@ public class ExpressionStatementVisitor extends ASTVisitor {
 		return super.visit(node);
 	}
 	public boolean visit(InfixExpression node){
-		//System.out.println(node.getOperator().toString());
 		operator=node.getOperator().toString();
 		return super.visit(node);
 		
