@@ -1,14 +1,38 @@
 package org.eclipse.jconqurr.core.ast.visitors;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.jdt.core.dom.ASTVisitor;
-import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
-import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.SimpleName;
 
 public class SimpleNameVisitor extends ASTVisitor {
+	List<String> identifiers = new ArrayList<String>();
+	List<SimpleName> simpleNames = new ArrayList<SimpleName>();
+	List<SimpleName>variables=new ArrayList<SimpleName>();
 	private String identifier;
+
+	@Override
+	public boolean visit(SimpleName node) {
+		simpleNames.add(node);
+		IBinding binding = node.resolveBinding();
+		identifier = node.toString();
+		identifiers.add(identifier);
+		try {
+			IVariableBinding vbinding = (IVariableBinding) node
+					.resolveBinding();
+			variables.add(node);
+			if (vbinding != null) {
+				type = vbinding.getType().getName();
+			}
+		} catch (ClassCastException e) {
+			//e.printStackTrace();
+		}
+
+		return true;
+	}
 
 	/**
 	 * @return the identifier
@@ -24,27 +48,18 @@ public class SimpleNameVisitor extends ASTVisitor {
 		return type;
 	}
 
+	public List<SimpleName> getSimpleNames() {
+		return simpleNames;
+	}
+	
+	public List<SimpleName> getVariables() {
+		return variables;
+	}
+
+	public List<String> getIdentifiers() {
+		return identifiers;
+	}
+
 	private String type;
 
-	@Override
-	public boolean visit(SimpleName node) {
-
-		IBinding binding = node.resolveBinding();
-		IVariableBinding vbinding = (IVariableBinding) node.resolveBinding();
-		identifier = node.toString();
-		type = vbinding.getType().getName();
-		if (node.getParent() instanceof ForStatement) {
-			System.out.println("Parent is a foor loop");
-		}
-		System.out.println("Identifier :" + identifier);
-		System.out.println("type :" + type);
-		System.out.println("Binding name:" + binding.getName());
-		System.out.println("Binding kind:" + binding.getKind());
-		System.out.println("Binding modifiers:" + binding.getModifiers());
-		System.out.println("Binding key:" + binding.getKey());
-		System.out.println(node.getParent().toString());
-
-		System.out.println("Simple Name:" + node.toString());
-		return false;
-	}
 }
