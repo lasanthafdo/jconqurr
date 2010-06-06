@@ -3,34 +3,34 @@ package org.eclipse.jconqurr.core.data;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.jconqurr.core.ast.visitors.ExpressionStatementVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.ForLoopVisitor;
+import org.eclipse.jconqurr.core.ast.visitors.MethodInvocationVisitor;
+import org.eclipse.jconqurr.core.ast.visitors.VariableDeclarationVisitor;
+import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Block;
-import org.eclipse.jdt.core.dom.Expression;
-import org.eclipse.jdt.core.dom.ExpressionStatement;
-import org.eclipse.jdt.core.dom.ForStatement;
-import org.eclipse.jdt.core.dom.IExtendedModifier;
+import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
-import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
+import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
+import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 
 public class ForLoopHandler implements IForLoopHandler {
 	private MethodDeclaration method;
-	private List<String> tasks = new ArrayList();
-	private String returnType;
-	private String modifier;
 	private String shedulerMethod;
+	private List<ForLoop> forLoops = new ArrayList<ForLoop>();
+	public static int counter = 0;
+	private String taskRunnerCode = "";
+	private boolean isStatic = false;
 
 	/**
 	 * @see IForLoopHandler#getModifiedMethod()
 	 */
 	public String getModifiedMethod() {
-		String taskCode = "";
-		int i = 1;
-		for (String s : tasks) {
-			taskCode = taskCode + taskRunnerCode("forLooptask" + i, s);
-			i++;
-		}
-		return sheduleTasks(tasks) + "\n" + taskCode;
+		return sheduleTasks() + "\n" + taskRunnerCode;
 	}
 
 	/**
@@ -39,100 +39,39 @@ public class ForLoopHandler implements IForLoopHandler {
 	public void setTasks() {
 		ForLoopVisitor loopVisitor = new ForLoopVisitor();
 		method.accept(loopVisitor);
-		List<ForStatement> forStatements = loopVisitor.getForLoops();
-		int start = 0;
-		int start1 = 0;
-		int start2 = 0;
-		int end1 = 0;
-		int end2 = 0;
-		String lefthandSideAssign = "";
-		String conditionOprator = "";
-		String conditon1 = "";
-		String conditon2 = "";
-		String updater = "";
-		String body = "";
-		List<String> inerLoops = new ArrayList();
-		for (ForStatement forLoop : forStatements) {
-			if (!(forLoop.getParent() instanceof ForStatement)) {
-				ExpressionStatementVisitor expressionStatementVisitor = new ExpressionStatementVisitor();
-				forLoop.getExpression().accept(expressionStatementVisitor);
-				conditionOprator = expressionStatementVisitor.getOprator();
-				body = forLoop.getBody().toString();
-				updater = forLoop.updaters().get(0).toString();
-				Expression initializer = (Expression) forLoop.initializers()
-						.get(0);
-				String initializers[] = forLoop.initializers().get(0)
-						.toString().split("=");
+		method.getBody().statements();
+		MethodInvocationVisitor methodInvocationVisitor = new MethodInvocationVisitor();
+		method.accept(methodInvocationVisitor);
+		List<MethodInvocation> directivesForLoops = new ArrayList<MethodInvocation>();
 
-				for (int k = 0; k < initializers.length; k++) {
-					if (isParsableToInt(initializers[k].trim())) {
-						start = Integer.parseInt(initializers[k].trim());
-						break;
-					} else
-						lefthandSideAssign = initializers[k];
-				}
-				String condition = "";
-				String strExpression = forLoop.getExpression().toString();
-				String regex = "[<>[<=][>=]]";
-				String result[] = {};
-				result = strExpression.split(regex);
-				Integer conditionInt = new Integer(0);
-
-				for (int j = 0; j < result.length; j++) {
-					if (isParsableToInt(result[j].trim())) {
-						conditionInt = Integer.parseInt(result[j].trim());
-						break;
-					} else {
-						condition = condition + result[j].trim();
-					}
-				}
-				int newCondition1 = (int) conditionInt / 2;
-				start1 = start;
-				end1 = newCondition1;
-				start2 = end1 + 1;
-				end2 = conditionInt;
-				conditon1 = condition + conditionOprator + end1;
-				conditon2 = condition + conditionOprator + end2;
-				try {
-					ExpressionStatementVisitor exprStmtVisitor = new ExpressionStatementVisitor();
-					Block block = method.getBody();
-					block.accept(exprStmtVisitor);
-					for (ExpressionStatement exprStmt : exprStmtVisitor
-							.getExpressionStatements()) {
-					}
-				} catch (Exception e) {
-
-				}
-			} else {
-				String initializer = forLoop.initializers().get(0).toString();
-				String expression = forLoop.getExpression().toString();
-				String updaters = forLoop.updaters().get(0).toString();
-				String inerForLoop = "for(" + initializer + ";" + expression
-						+ ";" + updaters + ")";
-				inerLoops.add(inerForLoop);
+		for (MethodInvocation m : methodInvocationVisitor.getMethods()) {
+			if (m.toString().startsWith("Directives.forLoop()")) {
+				directivesForLoops.add(m);
 			}
 		}
-		String task1 = "for(" + lefthandSideAssign + "=" + start1 + ";"
-				+ conditon1 + ";" + updater + ")" + body;
-		String task2 = "for(" + lefthandSideAssign + "=" + start2 + ";"
-				+ conditon2 + ";" + updater + ")" + body;
-		tasks.add(task1);
-		tasks.add(task2);
-
-	}
-
-	/**
-	 * Checks the string is convertible to a integer
-	 * 
-	 * @param s
-	 * @return boolean
-	 */
-	private boolean isParsableToInt(String s) {
-		try {
-			Integer.parseInt(s);
-			return true;
-		} catch (NumberFormatException e) {
-			return false;
+		
+		String blockContent = "";
+		for (MethodInvocation m : directivesForLoops) {
+			ASTNode parent = m.getParent();
+			while (parent.getNodeType() != 8) {
+				parent = parent.getParent();
+			}
+			if (parent.getNodeType() == 8) {
+				Block block = (Block) parent;
+				List<Statement> stmt = block.statements();
+				if (!(blockContent.equals(block.toString()))) {
+					blockContent = block.toString();
+					for (int i = 0; i < stmt.size(); i++) {
+						stmt.get(i).toString();
+						if (stmt.get(i).toString().trim().startsWith(
+								"Directives.forLoop()")) {
+							ForLoop fLoop = new ForLoop(block, i + 1);
+							fLoop.init();
+							forLoops.add(fLoop);
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -140,16 +79,33 @@ public class ForLoopHandler implements IForLoopHandler {
 	 * @see IForLoopHandler#init()
 	 */
 	public void init() {
-		returnType = method.getReturnType2().toString();
-		modifier = "";
-		List<IExtendedModifier> modifiers = method.modifiers();
-		for (IExtendedModifier a : modifiers) {
-			if (a.isModifier()) {
-				modifier = modifier + " " + ((Modifier) a).toString();
+		for (int i = 0; i < method.modifiers().size(); i++) {
+			if (method.modifiers().get(i).toString().equals("static")) {
+				isStatic = true;
 			}
 		}
-		shedulerMethod = modifier + " " + returnType + " "
-				+ method.getName().toString();
+		IMethodBinding binding = method.resolveBinding();
+		ITypeBinding[] parameterBinding = binding.getMethodDeclaration()
+				.getParameterTypes();
+		 
+		if (method.parameters().size() > 0) {
+			String arguments = "";
+			for (int i = 0; i < method.parameters().size(); i++) {
+				String d = method.parameters().get(i).toString();
+				if (i == (method.parameters().size() - 1)) {
+					arguments += d;
+				} else {
+					arguments += d + ",";
+				}
+			}
+			String m = binding.getMethodDeclaration().toString().substring(0,
+					binding.getMethodDeclaration().toString().indexOf("("));
+			shedulerMethod = m + "(" + arguments + ")";
+		} else {
+			shedulerMethod = binding.getMethodDeclaration().toString();
+		}
+		VariableDeclarationVisitor visitor = new VariableDeclarationVisitor();
+		method.accept(visitor);
 		setTasks();
 	}
 
@@ -167,10 +123,19 @@ public class ForLoopHandler implements IForLoopHandler {
 	 * @param taskBody
 	 * @return the runnable code
 	 */
-	private String taskRunnerCode(String task, String taskBody) {
-		String taskRunnerCode = "\n" + "static class " + task
-				+ " implements Runnable{" + "\n" + "public void run() {"
-				+ taskBody + "}}";
+	private String taskRunnerCode(String task, String taskBody,
+			String threadFields, String constructor) {
+		String taskRunnerCode = "";
+		if (isStatic) {
+			taskRunnerCode = "\n" + "static class " + task
+					+ " implements Runnable{" + threadFields + "\n"
+					+ constructor + "\n" + "public void run() {" + taskBody
+					+ "}}";
+		} else {
+			taskRunnerCode = "\n" + "class " + task + " implements Runnable{"
+					+ threadFields + "\n" + constructor + "\n"
+					+ "public void run() {" + taskBody + "}}";
+		}
 		return taskRunnerCode;
 	}
 
@@ -180,22 +145,127 @@ public class ForLoopHandler implements IForLoopHandler {
 	 * @param tasks
 	 * @return String
 	 */
-	private String sheduleTasks(List<String> tasks) {
-		String exec = "static ExecutorService execData = Executors.newCachedThreadPool();"
-				+ "\n";
-		String sheduleTasksMethod = "\n" + shedulerMethod + "(){" + "try{"
-				+ "\n" + "Future<?>[] future = (Future<?>[]) new Future["
-				+ tasks.size() + "];" + "\n";
-		String futureSubmit = "";
-		for (int i = 0; i < tasks.size(); i++) {
-			futureSubmit = futureSubmit + "future[" + i
-					+ "]=execData.submit(new" + " forLooptask" + (i + 1) + "());"
-					+ "\n";
-		}
-		String futureGet = "for(int i=0;i<" + tasks.size() + ";i++)" + "\n"
-				+ "future[i].get();" + "\n" + "}" + "\n"
-				+ "catch (Exception e) {e.printStackTrace();}}";
-		return exec + sheduleTasksMethod + futureSubmit + futureGet;
-	}
+	private String sheduleTasks() {
+		String methodDeclaration = "\n" + shedulerMethod + "{";
+		String methodBody = "";
+		if (forLoops.size() > 0) {
+			for (ForLoop f : forLoops) {
+				String beforeLoop = "";
+				String futurSheduler = "";
+				String futureSubmit = "";
+				String afterLoop = "";
+				String objectCreationArguments = "";
+				String threadFields = "";
+				List<String> constructorArguments = new ArrayList<String>();
+				List<String> constructorInitialization = new ArrayList<String>();
+				List<VariableDeclarationStatement> threadClassFields = f
+						.getThreadClassFields();
+				for (int i = 0; i < method.parameters().size(); i++) {
+					if (method.parameters().get(i) instanceof SingleVariableDeclaration) {
+						SingleVariableDeclaration var = (SingleVariableDeclaration) method
+								.parameters().get(i);
+						IVariableBinding vbind = var.resolveBinding();
+						for (int j = 0; j < f.getVariables().size(); j++) {
+							if (vbind.getName().equals(
+									f.getVariables().get(j).toString())) {
+								objectCreationArguments += vbind.getName()
+										+ ",";
+								threadFields += method.parameters().get(i)
+										+ ";" + "\n";
+								constructorArguments.add(method.parameters()
+										.get(i).toString());
+								String s = "this." + vbind.getName() + "="
+										+ vbind.getName();
+								constructorInitialization.add(s);
+							}
+						}
+					}
+				}
+				if(objectCreationArguments.length()>=1){
+				objectCreationArguments=objectCreationArguments.substring(0, (objectCreationArguments.length()-1));
+				}
+				for (int i = 0; i < threadClassFields.size(); i++) {
+					List<VariableDeclarationFragment> fragments = threadClassFields
+							.get(i).fragments();
+					for (int j = 0; j < fragments.size(); j++) {
+						if ((i == (threadClassFields.size() - 1))
+								&& (j == (fragments.size() - 1))) {
+							objectCreationArguments += fragments.get(j)
+									.getName();
+						} else {
+							objectCreationArguments += fragments.get(j)
+									.getName()
+									+ ",";
+						}
+						IVariableBinding typeBinding = fragments.get(j)
+								.resolveBinding();
+						ITypeBinding tbinding = fragments.get(j).getName()
+								.resolveTypeBinding();
+						threadFields += tbinding.getName() + " "
+								+ typeBinding.getName() + ";" + "\n";
+						constructorArguments.add(tbinding.getName() + " "
+								+ typeBinding.getName());
+						String s = "this." + typeBinding.getName() + "="
+								+ typeBinding.getName();
+						constructorInitialization.add(s);
+					}
+				}
+				String constructorBody = "";
+				String constructorParameters = "";
+				for (int i = 0; i < constructorArguments.size(); i++) {
+					if (i < (constructorArguments.size() - 1)) {
+						constructorParameters += constructorArguments.get(i)
+						+ ",";
+						
+					} else {
+						constructorParameters += constructorArguments.get(i);
+					}
+				}
+				for (int i = 0; i < constructorInitialization.size(); i++) {
+					constructorBody += constructorInitialization.get(i) + ";"
+							+ "\n";
+				}
 
+				if (f.getStatementBeforForLoop().size() > 0) {
+					for (Statement s : f.getStatementBeforForLoop()) {
+						beforeLoop = beforeLoop + s.toString() + "\n";
+					}
+				}
+
+				if (f.getStatementsAfterForLoop().size() > 0) {
+					for (Statement s : f.getStatementsAfterForLoop()) {
+						afterLoop = afterLoop + s.toString() + "\n";
+					}
+				}
+				f.getTasks();
+				futurSheduler = "try{" + "\n"
+						+ "Future<?>[] future = (Future<?>[]) new Future["
+						+ f.getTasks().size() + "];" + "\n";
+
+				for (int i = 0; i < f.getTasks().size(); i++) {
+					futureSubmit = futureSubmit + "future[" + i
+							+ "]=exec.submit(new" + " forLooptask"
+							+ (counter + 1) + "(" + objectCreationArguments
+							+ "));" + "\n";
+					String constructor = "";
+					constructor = "forLooptask" + (counter + 1) + "("
+							+ constructorParameters + ")" + "{"
+							+ constructorBody + "}";
+
+					taskRunnerCode = taskRunnerCode
+							+ taskRunnerCode("forLooptask" + (counter + 1), f
+									.getTasks().get(i), threadFields,
+									constructor);
+					counter++;
+				}
+				String futureGet = "for(int i=0;i<" + f.getTasks().size()
+						+ ";i++)" + "\n" + "future[i].get();" + "\n" + "}"
+						+ "\n" + "catch (Exception e) {e.printStackTrace();}";
+				String executorCode = futurSheduler + futureSubmit + futureGet;
+				methodBody = methodBody + beforeLoop + executorCode + afterLoop
+						+ "\n";
+			}
+		}
+		return methodDeclaration + methodBody + "}";
+	}
 }
