@@ -1,4 +1,4 @@
-package org.eclipse.jconqurr.internal.ui.actions;
+ package org.eclipse.jconqurr.internal.ui.actions;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
@@ -49,16 +49,12 @@ public class ConvertParallelAction extends ActionDelegate {
 			try {
 				selectedProject = (IJavaProject) (((IProject) firstElement)
 						.getNature(JavaCore.NATURE_ID));
-				//BuildJconqurrProj projBuilder = new BuildJconqurrProj();
-				IBuildJconqurrProjManager projBuilderManager=new BuildJconqurrProj();
-				IJavaProject parallelProject=projBuilderManager.createProject(selectedProject);
-				IHandleProjectParallelism handler=new HandleProjectParallelism();
+				IBuildJconqurrProjManager projBuilderManager = new BuildJconqurrProj();
+				IJavaProject parallelProject = projBuilderManager
+						.createProject(selectedProject);
+				IHandleProjectParallelism handler = new HandleProjectParallelism();
 				handler.handleProject(parallelProject, selectedProject);
-			//	IJavaProject proj = projBuilder.createProject(selectedProject);
-				//projBuilder.convert(proj, selectedProject);
-				 
 			} catch (CoreException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
