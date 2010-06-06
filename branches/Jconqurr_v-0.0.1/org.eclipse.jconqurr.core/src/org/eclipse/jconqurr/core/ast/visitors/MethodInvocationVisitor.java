@@ -19,4 +19,10 @@ public class MethodInvocationVisitor extends ASTVisitor {
 	public List<MethodInvocation> getMethods() {
 		return methods;
 	}
+	
+	public int getPosition(){
+		
+		return 0;
+		
+	}
 }
