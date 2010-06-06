@@ -6,9 +6,9 @@ import java.util.List;
 import org.eclipse.jconqurr.core.ast.visitors.BlockVisitor;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
-import org.eclipse.jdt.core.dom.NormalAnnotation;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 
@@ -22,6 +22,7 @@ public class DivideAndConquerHandler implements IDivideAndConquerHandler {
 	private List<String> argumentIdentifiers = new ArrayList<String>();
 	private String bodyOfRunMethod;
 	String className;
+	
 
 	@Override
 	public String getModifiedMethods() {
@@ -74,12 +75,6 @@ public class DivideAndConquerHandler implements IDivideAndConquerHandler {
 	@Override
 	public void init() {
 		className = recursiveMethod.getName().toString() + "Task";
-		List<NormalAnnotation> mod = recursiveMethodCaller.modifiers();
-		for (NormalAnnotation a : mod) {
-			if (a.getTypeName().toString().startsWith("DivideAndConquer")) {
-				a.delete();
-			}
-		}
 		int j = -1;
 		for (int i = 0; i < recursiveMethodCaller.getBody().statements().size(); i++) {
 			if ((((Statement) recursiveMethodCaller.getBody().statements().get(
@@ -101,17 +96,32 @@ public class DivideAndConquerHandler implements IDivideAndConquerHandler {
 		}
 		callerStmt = stmt;
 		recursiveMethodCaller.getBody().delete();
-		divideAndConquerCallerSignature = recursiveMethodCaller.toString()
-				.substring(0, recursiveMethodCaller.toString().length() - 2);
-
+	 	IMethodBinding binding = recursiveMethodCaller.resolveBinding();
+		ITypeBinding[] parameterBinding = binding.getMethodDeclaration()
+				.getParameterTypes();
+		 
+		if (recursiveMethodCaller.parameters().size() > 0) {
+			String arguments = "";
+			for (int i = 0; i < recursiveMethodCaller.parameters().size(); i++) {
+				String d = recursiveMethodCaller.parameters().get(i).toString();
+				if (i == (recursiveMethodCaller.parameters().size() - 1)) {
+					arguments += d;
+				} else {
+					arguments += d + ",";
+				}
+			}
+			String m = binding.getMethodDeclaration().toString().substring(0,
+					binding.getMethodDeclaration().toString().indexOf("("));
+			divideAndConquerCallerSignature = m + "(" + arguments + ")";
+		} else {
+			divideAndConquerCallerSignature = binding.getMethodDeclaration().toString();
+		}
 		IMethodBinding mBinding = recursiveMethod.resolveBinding();
 		recursiveMethod.parameters();
 		for (int i = 0; i < recursiveMethod.parameters().size(); i++) {
 			SingleVariableDeclaration sv = (SingleVariableDeclaration) recursiveMethod
 					.parameters().get(i);
 			IVariableBinding vBinding = sv.resolveBinding();
-			System.out.println("Parameter:" + vBinding.getType().getName()
-					+ " " + vBinding.getName());
 			argumentList.add(vBinding.getType().getName() + " "
 					+ vBinding.getName());
 			argumentIdentifiers.add(vBinding.getName());
@@ -161,7 +171,6 @@ public class DivideAndConquerHandler implements IDivideAndConquerHandler {
 				+ "coInvoke(task0, task1);\n"
 				+ recursiveMethod.getBody().toString().substring(position,
 						recursiveMethod.getBody().toString().length());
-		System.out.println(bodyOfRunMethod);
 	}
 
 	@Override
