@@ -1,6 +1,5 @@
 package org.eclipse.jconqurr.core.data;
 
-import java.util.List;
 
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 
