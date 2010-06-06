@@ -4,17 +4,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.eclipse.jconqurr.core.ast.visitors.AnnotationVisitor;
+import org.eclipse.jconqurr.core.ast.visitors.ExpressionStatementVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.MethodInvocationVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.MethodVisitor;
-import org.eclipse.jconqurr.core.dependency.DependencyAnalyser;
-import org.eclipse.jconqurr.core.dependency.IDependencyAnalyser;
+import org.eclipse.jconqurr.core.ast.visitors.TypeDeclarationVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IAnnotationBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
 
 /**
  * 
@@ -28,9 +28,9 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 	private List<MethodDeclaration> notAnnotatedMethods = new ArrayList<MethodDeclaration>();
 	private List<HashMap<String, MethodDeclaration>> annotatedDivideAndConquer = new ArrayList<HashMap<String, MethodDeclaration>>();
 	private List<MethodDeclaration> annotatedGPUMethods=new ArrayList<MethodDeclaration>();
+	private List<MethodDeclaration> annotatedPipelineMethods=new ArrayList<MethodDeclaration>();
 	
 	public List<MethodDeclaration> getAnnotatedGPUMethods(){
-		System.out.println(annotatedGPUMethods.size());
 		return annotatedGPUMethods;
 	}
 	
@@ -78,13 +78,16 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 	public void filter() {
 		if (compilationUnit == null)
 			throw new NullPointerException("Compilation Unit cannot be null");
-		List<MethodDeclaration> sortMethods = new ArrayList();
 		MethodVisitor methodVisitor = new MethodVisitor();
-		AnnotationVisitor annotationVisitor = new AnnotationVisitor();
+		ExpressionStatementVisitor exVisitor=new ExpressionStatementVisitor();
+		TypeDeclarationVisitor typeVisitor=new TypeDeclarationVisitor();
+		compilationUnit.accept(typeVisitor);
+		for(TypeDeclaration t:typeVisitor.getTypeDeclarations()){
+			ITypeBinding binding=t.resolveBinding();
+		}
 		compilationUnit.accept(methodVisitor);
-		IDependencyAnalyser analyser=new DependencyAnalyser();
 		for (MethodDeclaration method : methodVisitor.getMethods()) {
-			analyser.filterStatements(method);
+			method.accept(exVisitor);
 			IMethodBinding mb = method.resolveBinding();
 			if (mb != null) {
 				IAnnotationBinding[] ab = mb.getAnnotations();
@@ -101,6 +104,10 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 									.trim().equals("GPU")) {
 								annotatedGPUMethods.add(method);
 							} 
+							 else if (ab[i].getAnnotationType().getName()
+										.trim().equals("Pipeline")) {
+									 annotatedPipelineMethods.add(method);
+								} 
 							
 							else if (ab[i].getAnnotationType().getName()
 									.trim().startsWith("DivideAndConquer")) {
@@ -109,6 +116,7 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 								MethodInvocationVisitor methodInvocationVisitor = new MethodInvocationVisitor();
 								method.getBody()
 										.accept(methodInvocationVisitor);
+								
 								for (MethodInvocation mi : methodInvocationVisitor
 										.getMethods()) {
 									IMethodBinding binding = mi
@@ -121,7 +129,9 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 												recursiveMethod);
 									}
 								}
+								
 								annotatedDivideAndConquer.add(divideAndConquer);
+								
 							} else {
 								notAnnotatedMethods.add(method);
 							}
@@ -162,6 +172,11 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 	@Override
 	public List<HashMap<String, MethodDeclaration>> getAnnotatedDivideAndConquer() {
 		return annotatedDivideAndConquer;
+	}
+
+	@Override
+	public List<MethodDeclaration> getPipelineMethods() {
+		return annotatedPipelineMethods;
 	}
 
 }
