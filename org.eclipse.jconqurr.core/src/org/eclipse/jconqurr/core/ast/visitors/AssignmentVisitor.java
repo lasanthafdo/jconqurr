@@ -9,6 +9,7 @@ import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Assignment.Operator;
 
 public class AssignmentVisitor extends ASTVisitor {
+	 
 	private Expression leftHandSide;
 	private Operator operator;
 	private Expression rightHandSide;
