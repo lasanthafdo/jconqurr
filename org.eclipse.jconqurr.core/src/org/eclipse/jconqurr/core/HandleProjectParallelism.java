@@ -5,17 +5,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.text.BadLocationException;
-
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.jconqurr.core.ast.visitors.FieldDeclarationVisitor;
+import org.eclipse.jconqurr.core.ast.visitors.TypeDeclarationVisitor;
+import org.eclipse.jconqurr.core.data.ForLoop;
 import org.eclipse.jconqurr.core.data.ForLoopHandler;
 import org.eclipse.jconqurr.core.data.IForLoopHandler;
 import org.eclipse.jconqurr.core.divideandconquer.DivideAndConquerHandler;
 import org.eclipse.jconqurr.core.divideandconquer.IDivideAndConquerHandler;
 import org.eclipse.jconqurr.core.gpu.GPUHandler;
 import org.eclipse.jconqurr.core.gpu.IGPUHandler;
+import org.eclipse.jconqurr.core.pipeline.IPipelineHandler;
+import org.eclipse.jconqurr.core.pipeline.PipelineHandler;
 import org.eclipse.jconqurr.core.task.ITaskMethod;
 import org.eclipse.jconqurr.core.task.TaskMethod;
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -29,10 +31,11 @@ import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.ToolFactory;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
-import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.formatter.CodeFormatter;
 import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
 import org.eclipse.jface.text.Document;
@@ -41,7 +44,7 @@ import org.eclipse.text.edits.MalformedTreeException;
 import org.eclipse.text.edits.TextEdit;
 
 public class HandleProjectParallelism implements IHandleProjectParallelism {
-	private String className;
+	private String classNameDeclaration;
 	private String imports;
 	private String packageName;
 	private String taskParallelCode;
@@ -50,18 +53,25 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 	private String fieldDeclarations;
 	private String divideAndConquerCode;
 	private String gpuCode;
+	private String pipelineClassFields = "";
+	private String sharedFields="";
+	private String pipelineCode;
 	private static String srcPath;
 
-	public static String getSrcPath(){
+	public static String getSrcPath() {
 		return srcPath;
 	}
+
 	/**
 	 * @see HandleProjectParallelism#convert(IJavaProject, ICompilationUnit)
 	 */
 	public void convert(IJavaProject parallel, ICompilationUnit unit) {
+		ForLoop.lockNo=1;
+		ForLoopHandler.counter=0;
+		sharedFields="";
 		IProject project = parallel.getProject();
 		IFolder folder = project.getFolder("src");
-		srcPath=folder.getLocation().toOSString();
+		srcPath = folder.getLocation().toOSString();
 		CompilationUnit cu = parse(unit);
 		ICompilationUnitFilter filter = new CompilationUnitFilter();
 		filter.setCompilationUnit(cu);
@@ -71,10 +81,11 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		setLoopParallelCode(filter.getAnnotatedParallelForMethods());
 		setDivideAndConquerCode(filter.getAnnotatedDivideAndConquer());
 		setGPUCode(filter.getAnnotatedGPUMethods());
+		setPipelineCode(filter.getPipelineMethods());
 		setOtherMethods(filter.getNotAnnotatedMethods());
-		setClassName(unit.getElementName());
+		setClassName(cu);
 		setImports(unit);
-
+		
 		
 		IPackageFragmentRoot srcFolder = parallel
 				.getPackageFragmentRoot(folder);
@@ -86,9 +97,9 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 				packageName = dec[0].getElementName();
 				try {
 					String src = formatCode(generateClass());
-					 
+
 					ICompilationUnit cunit = fragment.createCompilationUnit(
-							className, src, true, null);
+							unit.getElementName(), src, true, null);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -97,7 +108,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
 	 * @see HandleProjectParallelism#handleProject(IJavaProject, IJavaProject)
 	 */
@@ -112,32 +123,41 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 			}
 		}
 	}
-	
+
 	/**
 	 * Generate the source code for the compilation unit
 	 * 
 	 * @return String
 	 */
 	private String generateClass() {
-		char[] name = new char[className.length() - 5];
-		className.getChars(0, className.length() - 5, name, 0);
-		String n = "";
-		for (char c : name) {
-			n = n + c;
-		}
+		 
 		String execImports;
 		String gpuImports;
-		if(!(this.gpuCode.equals(""))){
-			gpuImports="import java.io.*;"+"\n"+"import jcuda.*;"+"\n"+"import jcuda.driver.*;";
+		String pipelineImports;
+		String exec;
+		if (!(this.gpuCode.equals(""))) {
+			gpuImports = "import java.io.*;" + "\n" + "import jcuda.*;" + "\n"
+					+ "import jcuda.driver.*;";
+		} else {
+			gpuImports = "";
 		}
-		else{
-			gpuImports="";
+		if (!(this.pipelineCode.equals(""))) {
+			pipelineImports = "import java.io.BufferedReader;" + "\n"
+					+ "import java.io.FileReader;" + "\n"
+					+ "import java.io.IOException;" + "\n"
+					+ "import java.util.concurrent.*;" + "\n";
+
+		} else {
+			pipelineImports = "";
 		}
 		if (!(this.loopParallelCode.equals(""))
 				|| !(this.taskParallelCode.equals(""))) {
 			execImports = "import java.util.concurrent.ExecutorService;" + "\n"
 					+ "import java.util.concurrent.Executors;" + "\n"
-					+ "import java.util.concurrent.Future;";
+					+ "import java.util.concurrent.Future;"
+					+ "import java.util.concurrent.BrokenBarrierException;"
+					+ "import java.util.concurrent.CyclicBarrier;";
+			 
 		} else {
 			execImports = "";
 		}
@@ -149,18 +169,28 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		} else {
 			divideAndConqerImports = "";
 		}
+		if (!(this.loopParallelCode.equals(""))
+				|| !(this.taskParallelCode.equals(""))) {
+			exec = "static ExecutorService exec = Executors.newCachedThreadPool();"
+					+ "\n";
+		} else {
+			exec = "";
+		}
+
 		String src = "package " + packageName + ";" + "\n" + imports
-				+ execImports + divideAndConqerImports +gpuImports+ "\n "
-				+ "public class " + n + "{" + fieldDeclarations
-				+ taskParallelCode + loopParallelCode + divideAndConquerCode+gpuCode
-				+ otherMethods + "}";
-		
+				+ execImports + divideAndConqerImports + gpuImports
+				+ pipelineImports + "\n " + classNameDeclaration + "{"
+				+ fieldDeclarations+sharedFields + pipelineClassFields + exec
+				+ taskParallelCode + loopParallelCode + divideAndConquerCode
+				+ gpuCode + pipelineCode + otherMethods + "}";
+
 		return src;
 
 	}
 
 	/**
 	 * sets the task parallel code
+	 * 
 	 * @param taskParallelMethods
 	 */
 	private void setTaskParallelCode(List<MethodDeclaration> taskParallelMethods) {
@@ -174,33 +204,54 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		}
 	}
 
-	private void setGPUCode(List<MethodDeclaration> gpuMethods){
-		this.gpuCode="";
-		for(MethodDeclaration method:gpuMethods){
-			IGPUHandler gpuHandler=new GPUHandler();
+	private void setGPUCode(List<MethodDeclaration> gpuMethods) {
+		this.gpuCode = "";
+		for (MethodDeclaration method : gpuMethods) {
+			IGPUHandler gpuHandler = new GPUHandler();
 			gpuHandler.setMethod(method);
 			gpuHandler.process();
-			//System.out.println(gpuHandler.getModifiedCode());
-			this.gpuCode=this.gpuCode+gpuHandler.getModifiedCode();
+			this.gpuCode = this.gpuCode + gpuHandler.getModifiedCode();
 		}
 	}
+
+	private void setPipelineCode(List<MethodDeclaration> pipelineMethods) {
+		this.pipelineCode = "";
+		for (MethodDeclaration method : pipelineMethods) {
+			IPipelineHandler pipelineHandler = new PipelineHandler();
+			pipelineHandler.setMethod(method);
+			pipelineHandler.init();
+			this.pipelineCode = this.pipelineCode
+					+ pipelineHandler.getModifiedMethod();
+			pipelineClassFields = pipelineHandler.getFields();
+		}
+
+	}
+
 	/**
 	 * sets the loop parallel code
+	 * 
 	 * @param loopParallelMethods
 	 */
 	private void setLoopParallelCode(List<MethodDeclaration> loopParallelMethods) {
 		this.loopParallelCode = "";
+		this.sharedFields="";
 		for (MethodDeclaration method : loopParallelMethods) {
+			
 			IForLoopHandler forLoopHandler = new ForLoopHandler();
 			forLoopHandler.setMethod(method);
 			forLoopHandler.init();
 			this.loopParallelCode = this.loopParallelCode
 					+ forLoopHandler.getModifiedMethod();
 		}
+		int i=ForLoop.lockNo;
+		for(int j=1;j<i;j++){
+			sharedFields+="private static Object lock"+j+"=new Object();";
+		}
 	}
 
 	/**
 	 * sets the modified parallel divide and conquer code
+	 * 
 	 * @param divideAndConquerMethods
 	 */
 	private void setDivideAndConquerCode(
@@ -217,6 +268,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 
 	/**
 	 * sets the other methods which are not annotated by Jconqurr annotations
+	 * 
 	 * @param otherMethods
 	 */
 	private void setOtherMethods(List<MethodDeclaration> otherMethods) {
@@ -228,6 +280,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 
 	/**
 	 * sets the fields declarations in the class
+	 * 
 	 * @param cu
 	 */
 	private void setFieldsDeclaration(CompilationUnit cu) {
@@ -241,14 +294,53 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 
 	/**
 	 * sets the class name
+	 * 
 	 * @param className
 	 */
-	private void setClassName(String className) {
-		this.className = className;
+	private void setClassName(CompilationUnit compilationUnit) {
+		TypeDeclarationVisitor typeVisitor = new TypeDeclarationVisitor();
+		compilationUnit.accept(typeVisitor);
+		String modifiers = "";
+		String name = "";
+		String superType = "";
+		String interfaceTypes = "";
+		if (typeVisitor.getTypeDeclarations().size() == 1) {
+			TypeDeclaration t = typeVisitor.getTypeDeclarations().get(0);
+			ITypeBinding binding = t.resolveBinding();
+			for (int i = 0; i < t.modifiers().size(); i++) {
+				modifiers += t.modifiers().get(i) + " ";
+			}
+			name = t.getName().toString();
+			if (t.getSuperclassType() != null) {
+				superType = " extends " + t.getSuperclassType() + " ";
+			}
+			if (t.superInterfaceTypes().size() > 0) {
+				if (t.superInterfaceTypes().size() == 1) {
+					interfaceTypes = " implements "
+							+ t.superInterfaceTypes().get(0);
+				} else {
+					for (int i = 0; i < t.superInterfaceTypes().size(); i++) {
+						if (i != t.superInterfaceTypes().size() - 1) {
+							interfaceTypes += " "
+									+ t.superInterfaceTypes().get(i) + ",";
+						} else {
+							interfaceTypes = interfaceTypes + " "
+									+ t.superInterfaceTypes().get(i);
+						}
+					}
+					interfaceTypes = " implements " + interfaceTypes;
+				}
+			}
+			 
+		}
+
+		this.classNameDeclaration = modifiers + " class " + name + superType
+				+ interfaceTypes;
 	}
 
 	/**
 	 * sets the imports
+	 * 
 	 * @param unit
 	 */
 	private void setImports(ICompilationUnit unit) {
@@ -260,7 +352,6 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 					imports = imports + "import " + im.getElementName() + ";\n";
 			}
 		} catch (JavaModelException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 
@@ -268,6 +359,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 
 	/**
 	 * Formats the source code
+	 * 
 	 * @param src
 	 * @return
 	 * @throws org.eclipse.jface.text.BadLocationException
@@ -276,6 +368,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 	private String formatCode(String src)
 			throws org.eclipse.jface.text.BadLocationException, IOException {
 		// take default Eclipse formatting options
+
 		Map options = DefaultCodeFormatterConstants.getEclipseDefaultSettings();
 		// initialize the compiler settings to be able to format 1.5 code
 		options.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_1_5);
@@ -307,6 +400,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 				0, // initial indentation
 				System.getProperty("line.separator") // line separator
 				);
+
 		IDocument document = new Document(source);
 		try {
 			edit.apply(document);
