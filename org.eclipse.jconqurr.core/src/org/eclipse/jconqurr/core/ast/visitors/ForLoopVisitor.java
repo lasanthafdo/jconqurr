@@ -6,11 +6,7 @@ import java.util.List;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.ForStatement;
 
-/**
- * 
- * @author lasantha
- *
- */
+
 public class ForLoopVisitor extends ASTVisitor {
 	List<ForStatement> forLoops = new ArrayList<ForStatement>();
 	
