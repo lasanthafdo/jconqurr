@@ -190,8 +190,6 @@ public class GPUHandler implements IGPUHandler {
 			}
 
 		}
-		System.out.println("length:"+method.getBody().toString().length());
-		System.out.println("position:"+position);
 		if(method.getBody().toString().length()==position){
 		newBody= "{"+getGpuCode()+ "}";
 		}
