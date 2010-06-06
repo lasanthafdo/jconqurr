@@ -52,4 +52,6 @@ public interface ICompilationUnitFilter {
 	 * @return
 	 */
 	public List<MethodDeclaration> getAnnotatedGPUMethods();
+
+	public List<MethodDeclaration> getPipelineMethods();
 }
