@@ -5,7 +5,7 @@ import java.util.List;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 
 public interface IPipelineHandler {
-	public String getModifiedMethod();
+	public String getModifiedMethod(String className);
 
 	public List<String> getTasks();
 
@@ -13,5 +13,5 @@ public interface IPipelineHandler {
 
 	public void init();
 
-	public String getFields();
+	public String getFields(String className);
 }
