@@ -12,6 +12,7 @@ import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 
+
 public class DivideAndConquerHandler implements IDivideAndConquerHandler {
 	private MethodDeclaration recursiveMethod;
 	private MethodDeclaration recursiveMethodCaller;
@@ -20,13 +21,15 @@ public class DivideAndConquerHandler implements IDivideAndConquerHandler {
 	private String callerStmt;
 	private List<String> argumentList = new ArrayList<String>();
 	private List<String> argumentIdentifiers = new ArrayList<String>();
-	private String bodyOfRunMethod;
+	private String bodyOfRunMethod = "";
 	String className;
-	
+	String originalRecursiveMethod = "";
+	String runMethod = "";
+	int occurence = 1;
 
 	@Override
 	public String getModifiedMethods() {
-		return getCaller() + getPIClass();
+		return getCaller() + getPIClass() + originalRecursiveMethod;
 	}
 
 	private String getCaller() {
@@ -96,7 +99,8 @@ public class DivideAndConquerHandler implements IDivideAndConquerHandler {
 		}
 		callerStmt = stmt;
 		recursiveMethodCaller.getBody().delete();
-	 	IMethodBinding binding = recursiveMethodCaller.resolveBinding();
+		
+		IMethodBinding binding = recursiveMethodCaller.resolveBinding();
 		ITypeBinding[] parameterBinding = binding.getMethodDeclaration()
 				.getParameterTypes();
 		 
@@ -122,57 +126,62 @@ public class DivideAndConquerHandler implements IDivideAndConquerHandler {
 			SingleVariableDeclaration sv = (SingleVariableDeclaration) recursiveMethod
 					.parameters().get(i);
 			IVariableBinding vBinding = sv.resolveBinding();
+			System.out.println("Parameter:" + vBinding.getType().getName()
+					+ " " + vBinding.getName());
 			argumentList.add(vBinding.getType().getName() + " "
 					+ vBinding.getName());
 			argumentIdentifiers.add(vBinding.getName());
 		}
-		recursiveMethod.getBody().statements();
-		BlockVisitor bVisitor = new BlockVisitor();
-		String body = "";
-		int position = 0;
-		int occurence = 0;
-		String task = "";
+		recursiveMethod.getBody().statements();		
+		
+		setRunMethod();
+		bodyOfRunMethod = "{" + className + " task1=null, task2=null;" + runMethod + "if((task1 != null)&&(task2 != null)){\n coInvoke(task1, task2);\n}\n else if(task1!=null)invoke(task1);\n else if(task2!=null)invoke(task2);\n}";;
+		System.out.println(bodyOfRunMethod);
+	}
+	
+	private void setRunMethod(){
 		for (int i = 0; i < recursiveMethod.getBody().statements().size(); i++) {
-			Statement st = (Statement) (recursiveMethod.getBody().statements()
-					.get(i));
-			if (st.getNodeType() == Statement.IF_STATEMENT) {
-				st.accept(bVisitor);
-				List<Block> blocks = bVisitor.getBlocks();
-				for (Block b : blocks) {
-					for (int a = 0; a < b.statements().size(); a++) {
-						Statement t = (Statement) (b.statements().get(a));
-						if (t.toString().trim().startsWith(
-								recursiveMethod.getName().toString())) {
-							task = task
-									+ className
-									+ " task"
-									+ occurence
-									+ "= new "
-									+ className
-									+ t.toString().substring(
-											recursiveMethod.getName()
-													.toString().length())
-									+ "\n";
-							position = recursiveMethod.getBody().toString()
-									.indexOf(
-											recursiveMethod.getName()
-													.toString());
-							b.statements().remove(a);
-							occurence++;
-							a = a - 1;
-						}
-					}
+			Statement st = (Statement) (recursiveMethod.getBody().statements().get(i));
+			if(st.getNodeType() == Statement.IF_STATEMENT){
+				visitIfStatement(st);
+			}
+			else if(st.toString().trim().startsWith(recursiveMethod.toString().trim())){
+				String arguments = st.toString().substring((st.toString().indexOf('(')+1), (st.toString().lastIndexOf(')')));
+				this.runMethod += "task" + occurence + " = new " + className + "("+ arguments + ");";
+				this.occurence++;
+			}
+			else{
+				this.runMethod += st.toString() + "\n";
+			}			
+		}
+	}
+
+	private void visitIfStatement(Statement stmt){
+		Statement st = stmt;
+		int blockStart = st.toString().indexOf("{");
+		this.runMethod += st.toString().substring(0, blockStart+1);
+		BlockVisitor bVisitor = new BlockVisitor();		
+		st.accept(bVisitor);
+		List<Block> blocks = bVisitor.getBlocks();
+		for (Block b : blocks) {
+			for (int a = 0; a < b.statements().size(); a++) {
+				Statement t = (Statement) (b.statements().get(a));
+				if (t.toString().trim().startsWith(recursiveMethod.getName().toString())) {
+					String arguments = t.toString().substring((t.toString().indexOf('(')+1), (t.toString().lastIndexOf(')')));
+					this.runMethod += "task" + occurence + " = new " + className + "("+ arguments + ");";
+					this.occurence++;
+				}
+				else if(t.getNodeType()==Statement.IF_STATEMENT){
+					visitIfStatement(t);
+				}
+				else{
+					this.runMethod += t.toString() + "\n";
 				}
 			}
 		}
-		bodyOfRunMethod = recursiveMethod.getBody().toString().substring(0,
-				position)
-				+ task
-				+ "coInvoke(task0, task1);\n"
-				+ recursiveMethod.getBody().toString().substring(position,
-						recursiveMethod.getBody().toString().length());
+		this.runMethod += "}";
 	}
-
+	
 	@Override
 	public void setRecursionCaller(MethodDeclaration method) {
 		recursiveMethodCaller = method;
@@ -181,6 +190,7 @@ public class DivideAndConquerHandler implements IDivideAndConquerHandler {
 	@Override
 	public void setRecursiveMethod(MethodDeclaration method) {
 		recursiveMethod = method;
+		originalRecursiveMethod += recursiveMethod.toString();
 	}
 
 }
