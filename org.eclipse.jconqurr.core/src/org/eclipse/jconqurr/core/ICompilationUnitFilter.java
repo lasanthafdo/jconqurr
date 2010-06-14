@@ -4,6 +4,10 @@ import java.util.HashMap;
 import java.util.List;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
+
+import com.sun.org.apache.bcel.internal.classfile.InnerClass;
+import com.sun.org.apache.bcel.internal.classfile.InnerClasses;
 
 /**
  * 
@@ -54,4 +58,8 @@ public interface ICompilationUnitFilter {
 	public List<MethodDeclaration> getAnnotatedGPUMethods();
 
 	public List<MethodDeclaration> getPipelineMethods();
+
+	public List<TypeDeclaration> getOtherInnerClasses();
+
+	//public void removeUnwantedStuff();
 }

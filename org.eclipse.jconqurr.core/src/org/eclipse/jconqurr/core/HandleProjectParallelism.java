@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.text.BadLocationException;
+
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.jconqurr.core.ast.visitors.FieldDeclarationVisitor;
@@ -31,6 +33,7 @@ import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.ToolFactory;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.ITypeBinding;
@@ -43,13 +46,18 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.text.edits.MalformedTreeException;
 import org.eclipse.text.edits.TextEdit;
 
+import com.sun.org.apache.bcel.internal.classfile.InnerClass;
+import com.sun.org.apache.bcel.internal.classfile.InnerClasses;
+
 public class HandleProjectParallelism implements IHandleProjectParallelism {
 	private String classNameDeclaration;
+	private String className;
 	private String imports;
 	private String packageName;
 	private String taskParallelCode;
 	private String loopParallelCode;
 	private String otherMethods;
+	private String otherInnerClasses;
 	private String fieldDeclarations;
 	private String divideAndConquerCode;
 	private String gpuCode;
@@ -76,14 +84,21 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		ICompilationUnitFilter filter = new CompilationUnitFilter();
 		filter.setCompilationUnit(cu);
 		filter.filter();
+		//filter.removeUnwantedStuff();
 		setFieldsDeclaration(cu);
 		setTaskParallelCode(filter.getAnnotatedParallelTaskMethods());
 		setLoopParallelCode(filter.getAnnotatedParallelForMethods());
+		System.out.println("Divide and Conquer detected---------------------------------------------------");
+		
 		setDivideAndConquerCode(filter.getAnnotatedDivideAndConquer());
+		
+		System.out.println("Divide and Conquer detected---------------------------------------------------");
+		
 		setGPUCode(filter.getAnnotatedGPUMethods());
-		setPipelineCode(filter.getPipelineMethods());
-		setOtherMethods(filter.getNotAnnotatedMethods());
+		setOtherInnerClasses(filter.getOtherInnerClasses());
+		setOtherMethods(filter.getNotAnnotatedMethods());		
 		setClassName(cu);
+		setPipelineCode(filter.getPipelineMethods());
 		setImports(unit);
 		
 		
@@ -96,6 +111,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 						dec[0].getElementName(), true, null);
 				packageName = dec[0].getElementName();
 				try {
+					System.err.println(generateClass());
 					String src = formatCode(generateClass());
 
 					ICompilationUnit cunit = fragment.createCompilationUnit(
@@ -142,10 +158,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 			gpuImports = "";
 		}
 		if (!(this.pipelineCode.equals(""))) {
-			pipelineImports = "import java.io.BufferedReader;" + "\n"
-					+ "import java.io.FileReader;" + "\n"
-					+ "import java.io.IOException;" + "\n"
-					+ "import java.util.concurrent.*;" + "\n";
+			pipelineImports = "import java.util.concurrent.*;" + "\n";
 
 		} else {
 			pipelineImports = "";
@@ -182,7 +195,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 				+ pipelineImports + "\n " + classNameDeclaration + "{"
 				+ fieldDeclarations+sharedFields + pipelineClassFields + exec
 				+ taskParallelCode + loopParallelCode + divideAndConquerCode
-				+ gpuCode + pipelineCode + otherMethods + "}";
+				+ gpuCode + pipelineCode + otherMethods + otherInnerClasses + "}";
 
 		return src;
 
@@ -210,6 +223,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 			IGPUHandler gpuHandler = new GPUHandler();
 			gpuHandler.setMethod(method);
 			gpuHandler.process();
+			// System.out.println(gpuHandler.getModifiedCode());
 			this.gpuCode = this.gpuCode + gpuHandler.getModifiedCode();
 		}
 	}
@@ -221,8 +235,8 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 			pipelineHandler.setMethod(method);
 			pipelineHandler.init();
 			this.pipelineCode = this.pipelineCode
-					+ pipelineHandler.getModifiedMethod();
-			pipelineClassFields = pipelineHandler.getFields();
+					+ pipelineHandler.getModifiedMethod(className);
+			pipelineClassFields = pipelineHandler.getFields(className);
 		}
 
 	}
@@ -247,6 +261,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		for(int j=1;j<i;j++){
 			sharedFields+="private static Object lock"+j+"=new Object();";
 		}
+	 
 	}
 
 	/**
@@ -256,12 +271,22 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 	 */
 	private void setDivideAndConquerCode(
 			List<HashMap<String, MethodDeclaration>> divideAndConquerMethods) {
+		System.out.println("Divide and Conquer detected---------------------------------------------------");
+		
 		this.divideAndConquerCode = "";
 		for (HashMap<String, MethodDeclaration> map : divideAndConquerMethods) {
+			//System.out.println("Divide and Conquer detected---------------------------------------------------");
+			System.out.println(map.get("caller"));
+			System.out.println(map.get("recursive"));
+			System.out.println("Divide and Conquer detected---------------------------------------------------");
+			
 			IDivideAndConquerHandler divideAndConquerHandler = new DivideAndConquerHandler();
 			divideAndConquerHandler.setRecursionCaller(map.get("caller"));// recursive
 			divideAndConquerHandler.setRecursiveMethod(map.get("recursive"));
+			
 			divideAndConquerHandler.init();
+			//System.out.println("Divide and Conquer detected---------------------------------------------------");
+			
 			divideAndConquerCode = divideAndConquerHandler.getModifiedMethods();
 		}
 	}
@@ -275,6 +300,13 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		this.otherMethods = "";
 		for (MethodDeclaration method : otherMethods) {
 			this.otherMethods = this.otherMethods + method.toString();
+		}
+	}
+	
+	private void setOtherInnerClasses(List<TypeDeclaration> innerClasses){
+		this.otherInnerClasses = "";
+		for(TypeDeclaration innerClass : innerClasses){
+			this.otherInnerClasses += innerClass.toString() + "\n";
 		}
 	}
 
@@ -304,9 +336,10 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		String name = "";
 		String superType = "";
 		String interfaceTypes = "";
-		if (typeVisitor.getTypeDeclarations().size() == 1) {
+		if (typeVisitor.getTypeDeclarations().size() >= 1) {
 			TypeDeclaration t = typeVisitor.getTypeDeclarations().get(0);
 			ITypeBinding binding = t.resolveBinding();
+			// System.out.println(t.SUPERCLASS_TYPE_PROPERTY);
 			for (int i = 0; i < t.modifiers().size(); i++) {
 				modifiers += t.modifiers().get(i) + " ";
 			}
@@ -331,11 +364,19 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 					interfaceTypes = " implements " + interfaceTypes;
 				}
 			}
-			 
+			/*
+			 * System.out.println("modifiers:"+t.modifiers());
+			 * System.out.println(t.getName());
+			 * System.out.println("superClassType:"+t.getSuperclassType());
+			 * System.out.println("Interfaces"+t.superInterfaceTypes());
+			 */
 		}
 
+		if(name != null)
+			this.className = name;
 		this.classNameDeclaration = modifiers + " class " + name + superType
 				+ interfaceTypes;
+		System.out.println(this.classNameDeclaration);
 	}
 
 	/**
@@ -352,6 +393,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 					imports = imports + "import " + im.getElementName() + ";\n";
 			}
 		} catch (JavaModelException e1) {
+			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 
@@ -392,6 +434,9 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		// retrieve the source to format
 		String source = src;
 		source = src; // retrieve the source
+		/*System.out.println("*******************");
+		System.out.println(src);
+		System.out.println("*******************");*/
 		final TextEdit edit = codeFormatter.format(
 				CodeFormatter.K_COMPILATION_UNIT, // format a compilation unit
 				source, // source to format
@@ -402,6 +447,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 				);
 
 		IDocument document = new Document(source);
+
 		try {
 			edit.apply(document);
 		} catch (MalformedTreeException e) {
