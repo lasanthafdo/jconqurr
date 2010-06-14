@@ -2,9 +2,8 @@ package org.eclipse.jconqurr.core.pipeline;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.eclipse.jconqurr.core.ast.visitors.MethodInvocationVisitor;
-import org.eclipse.jconqurr.core.ast.visitors.SimpleNameVisitor;
+import org.eclipse.jconqurr.core.ast.visitors.SimpleNameVisitor; //import org.eclipse.jconqurr.core.ast.visitors.StatementVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.VariableDeclarationVisitor;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Block;
@@ -19,38 +18,73 @@ import org.eclipse.jdt.core.dom.WhileStatement;
 
 public class PipelineHandler implements IPipelineHandler {
 	private MethodDeclaration method;
+	// private String pipelineInput = "";
 	private List<VariableDeclarationStatement> variableDeclarationStatements = new ArrayList<VariableDeclarationStatement>();
 	private String pipelineOutPut = "";
 	private List<SimpleName> variables = new ArrayList<SimpleName>();
+	// private List<VariableDeclarationStatement>
+	// runMethodVariableDeclarationStatements = new
+	// ArrayList<VariableDeclarationStatement>();
+	// private List<VariableDeclarationStatement> threadClassFields = new
+	// ArrayList<VariableDeclarationStatement>();
 	private String pipelineMethod = "";
 	private List<Statement> statementBeforePipeline = new ArrayList<Statement>();
 	private String stmtBeforePipeline = "";
+	// private String[] mainInput = { "" };
 	private String expressionOfWhileStatement = "";
+	// private String inputThread = "";
+	// private List<String> threadInputFields = new ArrayList<String>();
+	// private List<String> queFields = new ArrayList<String>();
+	// private List<String> barrierFields = new ArrayList<String>();
 	private List<PipelineStage> pipelineStages = new ArrayList<PipelineStage>();
+	private String className = "";
+	List<String> queueFileds = new ArrayList<String>();
+	private String queueFields="";
+
+	public String getClassName() {
+		return className;
+	}
+
+	public List<PipelineStage> getPipelineStages() {
+		return pipelineStages;
+	}
+
 	private String stmtAfterPipeline = "";
 
 	@Override
-	public String getModifiedMethod() {
+	public String getModifiedMethod(String className) {
 		String innerClasses = "";
 		String threadStatements = "";
 		for (PipelineStage p : pipelineStages) {
-			p.process();
-			innerClasses += p.getInputThreadClass();
-			threadStatements += p.getThreadDeclaration();
+			p.processStage(className);
+			innerClasses += p.getThreadClass();
+			threadStatements += p.getThreadDeclaration(className);
+
 		}
 		setPipelineMethod(threadStatements);
+		System.out.println(pipelineMethod + innerClasses + getBarrierClass());
 		return pipelineMethod + innerClasses + getBarrierClass();
 	}
 
-	public String getFields() {
+	public String getFields(String className) {
+		setQueueFields();
 		String fields = "\n";
-		for (String s : PipelineStage.barrierFields) {
-			fields += s;
-		}
-		fields += PipelineStage.queField;
-		fields += "static Barrier b = new Barrier();";
+		fields += PipelineStage.barrierFields;
+		fields += this.queueFields;
+		fields += "static " + className + " jq" + className + "= new "
+				+ className + "();";
+		fields += "static Barrier jqBarrier = jq"+ className + ".new Barrier();";
+		
 		return fields;
 	}
+	
+	private void setQueueFields(){
+		queueFields += "\n";
+		
+		for(String s:queueFileds){
+			queueFields += s.toString() + "\n";
+		}
+	} 
 
 	@Override
 	public List<String> getTasks() {
@@ -93,7 +127,9 @@ public class PipelineHandler implements IPipelineHandler {
 		} else {
 			decl = binding.getMethodDeclaration().toString();
 		}
-		String barrierInvokation = "b.process();";
+
+		String barrierInvokation = "jqBarrier.process();";
+
 		pipelineMethod = decl + "{" + stmtBeforePipeline + "\n" + threads
 				+ barrierInvokation + stmtAfterPipeline + "}";
 	}
@@ -106,12 +142,12 @@ public class PipelineHandler implements IPipelineHandler {
 		this.method.accept(vVisitor);
 		this.variableDeclarationStatements = vVisitor.getVariablesDeclaraions();
 		int stageCounter = 0;
-		PipelineStage.barrierFields.clear();
-		PipelineStage.queField = "";
-		PipelineStage.booleanFields = "";
+		PipelineStage.barrierFields = "";
+		//PipelineStage.queueFields = "";
 		PipelineStage.numberOfStages = 0;
-		PipelineStage.queCounter = 0;
+		
 		List<Statement> stmts = method.getBody().statements();
+		List<Statement> whileStmts = null;
 		for (MethodInvocation m : mVisitor.getMethods()) {
 			if (m.toString().trim().startsWith("Directives.pipelineStart")) {
 				int i = 0;
@@ -125,6 +161,9 @@ public class PipelineHandler implements IPipelineHandler {
 							.get(0);
 					expressionOfWhileStatement = wstmt.getExpression()
 							.toString();
+					whileStmts = ((Block) wstmt.getBody()).statements();
+					System.out.println(whileStmts);
+
 				} catch (ClassCastException e) {
 
 				}
@@ -144,12 +183,11 @@ public class PipelineHandler implements IPipelineHandler {
 			}
 
 			if (m.toString().trim().startsWith("Directives.pipelineStage")) {
-				List<Statement> statments = new ArrayList<Statement>();
-				ASTNode node = (ASTNode) getNextStatement(m).get(0);
+				List<Statement> statments = getNextStageStatement(m);
 				stageCounter++;
-				pipelineStages.add(new PipelineStage(m, (Statement) node,
+				pipelineStages.add(new PipelineStage(m, statments,
 						statementBeforePipeline, expressionOfWhileStatement,
-						stageCounter));
+						stageCounter, this));
 			}
 			if (m.toString().trim().startsWith("Directives.pipelineOutput()")) {
 				pipelineOutPut = getNextStatement(m).get(0).toString();
@@ -162,7 +200,7 @@ public class PipelineHandler implements IPipelineHandler {
 	}
 
 	private String getBarrierClass() {
-		String classDecl = "static class Barrier";
+		String classDecl = "class Barrier";
 		String fields = "boolean isCompleted = false;";
 		String processMethod = "synchronized void process() {"
 				+ "while (!isCompleted) {"
@@ -190,6 +228,15 @@ public class PipelineHandler implements IPipelineHandler {
 	}
 
 	private List<ASTNode> getNextStatement(ASTNode node) {
+		// List<Statement> stmts = new ArrayList<Statement>();
+		// StatementVisitor stmtVisitor = new StatementVisitor();
+		// node.getParent().getParent().accept(stmtVisitor);
+		// for(Statement stmt:stmtVisitor.getStatements()){
+		// stmts.add(stmt);
+		// if(stmt.toString().trim().startsWith("Directives.pipelineStage"))
+		// break;
+		// }
+
 		ASTNode parent = node.getParent().getParent();
 		List<ASTNode> nextStatement = new ArrayList<ASTNode>();
 		ASTNode blockParent;
@@ -202,6 +249,41 @@ public class PipelineHandler implements IPipelineHandler {
 						.getStartPosition()
 						&& (i + 1 < statements.size())) {
 					nextStatement.add(statements.get(i + 1));
+				}
+			}
+		}
+		return nextStatement;
+
+	}
+
+	private List<Statement> getNextStageStatement(ASTNode node) {
+		// List<Statement> stmts = new ArrayList<Statement>();
+		// StatementVisitor stmtVisitor = new StatementVisitor();
+		// node.getParent().getParent().accept(stmtVisitor);
+		// for(Statement stmt:stmtVisitor.getStatements()){
+		// stmts.add(stmt);
+		// if(stmt.toString().trim().startsWith("Directives.pipelineStage"))
+		// break;
+		// }
+
+		ASTNode parent = node.getParent().getParent();
+		List<Statement> nextStatement = new ArrayList<Statement>();
+		ASTNode blockParent;
+		if (parent instanceof Block) {
+			Block block = (Block) parent;
+			blockParent = block.getParent();
+			List<Statement> statements = block.statements();
+			for (int i = 0; i < statements.size(); i++) {
+				if (statements.get(i).getStartPosition() == node
+						.getStartPosition()
+						&& (i + 1 < statements.size())) {
+					while (((i + 1) < statements.size())
+							&& (!statements.get(i + 1).toString().trim()
+									.startsWith("Directives.pipelineStage"))) {
+						nextStatement.add(statements.get(i + 1));
+						i++;
+					}
+
 				}
 			}
 		}
