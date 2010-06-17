@@ -1,36 +1,44 @@
 package org.eclipse.jconqurr.core.ast.visitors;
 
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.Assignment.Operator;
 
 public class AssignmentVisitor extends ASTVisitor {
-	 
-	private Expression leftHandSide;
-	private Operator operator;
-	private Expression rightHandSide;
+	private List<Assignment> assigments = new ArrayList<Assignment>(); 
+	private Assignment currentNode;
 	/**
 	 * @return the leftHandSide
 	 */
 	public Expression getLeftHandSide() {
-		return leftHandSide;
+		return currentNode.getLeftHandSide();
 	}
+	/**
+	 * 
+	 * @return the operator used for assignment operation
+	 */
 	public Operator getOperator(){
-		return operator;
+		return currentNode.getOperator();
 	}
 	/**
 	 * @return the rightHandSide
 	 */
 	public Expression getRightHandSide() {
-		return rightHandSide;
+		return currentNode.getRightHandSide();
 	}
 	
 	public boolean visit(Assignment node) {
-		leftHandSide=node.getLeftHandSide();
-		rightHandSide=node.getRightHandSide();
-		operator=node.getOperator();
+		assigments.add(node);
+		currentNode = node;
 		return super.visit(node);
+	}
+	
+	public List<Assignment> getAssignments() {
+		return assigments;
 	}
 }
