@@ -3,9 +3,12 @@ package org.eclipse.jconqurr.internal.ui.commands;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.resources.IProjectDescription;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jconqurr.core.Activator;
+import org.eclipse.jconqurr.core.JConqurrNature;
 import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
@@ -36,6 +39,7 @@ public class AddJConqNature extends AbstractHandler {
 						bundlePath = locDetails[i+1];
 						break;
 					}
+				
 				// add our classpaths to a IClassPathEntry array and set it to the project
 				IClasspathEntry[] modifiedClassPaths = null;
 				IPath libPath = new Path(bundlePath + IPath.SEPARATOR + "lib").makeAbsolute();
@@ -46,9 +50,21 @@ public class AddJConqNature extends AbstractHandler {
 				IClasspathEntry drctvsCpEntry = JavaCore.newLibraryEntry(directivesPath, null, null);
 				modifiedClassPaths = addClassPathEntry(modifiedClassPaths, drctvsCpEntry);
 				selectedProject.setRawClasspath(modifiedClassPaths, null);
+				
+				// add JConq nature
+				IProjectDescription projDescription = selectedProject.getProject().getDescription();
+				String[] natures = projDescription.getNatureIds();
+				String[] modifiedNatures = new String[natures.length+1];
+				System.arraycopy(natures, 0, modifiedNatures, 0, natures.length);
+				modifiedNatures[natures.length] = JConqurrNature.JCONQ_NATURE;
+				projDescription.setNatureIds(modifiedNatures);
+				selectedProject.getProject().setDescription(projDescription, null);
 			}
 		} catch (JavaModelException e) {
 			// TODO: handle exception
+			e.printStackTrace();
+		} catch (CoreException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return null;

@@ -63,5 +63,15 @@
          </action>
       </objectContribution>
    </extension>
+   <extension
+         id="org.eclipse.jconqurr.parallelnature"
+         name="JConqurr Nature"
+         point="org.eclipse.core.resources.natures">
+      <runtime>
+         <run
+               class="org.eclipse.jconqurr.core.JConqurrNature">
+         </run>
+      </runtime>
+   </extension>
 
 </plugin>
