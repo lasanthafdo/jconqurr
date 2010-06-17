@@ -94,7 +94,6 @@ public class BuildJconqurrProj implements IBuildJconqurrProjManager {
 				IClasspathEntry[] libPaths = new IClasspathEntry[libraryPath
 						.size() + 1];
 				for (int i = 0; i < libraryPath.size(); i++) {
-					System.out.println(libraryPath.get(i).toOSString());
 					libPaths[i + 1] = JavaCore.newLibraryEntry((libraryPath
 							.get(i)), null, null, true);
 				}

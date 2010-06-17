@@ -78,11 +78,11 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		ICompilationUnitFilter filter = new CompilationUnitFilter();
 		filter.setCompilationUnit(cu);
 		filter.filter();
+		
 		setFieldsDeclaration(cu);
 		setTaskParallelCode(filter.getAnnotatedParallelTaskMethods());
 		setLoopParallelCode(filter.getAnnotatedParallelForMethods());
 		setDivideAndConquerCode(filter.getAnnotatedDivideAndConquer());
-
 		setGPUCode(filter.getAnnotatedGPUMethods());
 		setOtherInnerClasses(filter.getOtherInnerClasses());
 		setOtherMethods(filter.getNotAnnotatedMethods());
