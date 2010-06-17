@@ -32,13 +32,8 @@ public class AddJConqNature extends AbstractHandler {
 				IClasspathEntry[] classPaths = selectedProject
 						.getResolvedClasspath(false);
 				Bundle thisBundle = Activator.getDefault().getBundle();
-				String[] locDetails = thisBundle.getLocation().split(":");
-				String bundlePath = "";
-				for(int i=0; i<locDetails.length; i++)
-					if(locDetails[i].equals("file")) {
-						bundlePath = locDetails[i+1];
-						break;
-					}
+				String location = thisBundle.getLocation();
+				String bundlePath = location.substring(location.indexOf("file") + 5);
 				
 				// add our classpaths to a IClassPathEntry array and set it to the project
 				IClasspathEntry[] modifiedClassPaths = null;
