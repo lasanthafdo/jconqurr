@@ -7,6 +7,8 @@ import java.util.Map;
 
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.jconqurr.core.ast.visitors.FieldDeclarationVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.TypeDeclarationVisitor;
 import org.eclipse.jconqurr.core.data.ForLoop;
@@ -20,6 +22,7 @@ import org.eclipse.jconqurr.core.pipeline.IPipelineHandler;
 import org.eclipse.jconqurr.core.pipeline.PipelineHandler;
 import org.eclipse.jconqurr.core.task.ITaskMethod;
 import org.eclipse.jconqurr.core.task.TaskMethod;
+import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IImportDeclaration;
 import org.eclipse.jdt.core.IJavaProject;
@@ -33,7 +36,6 @@ import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
-import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.formatter.CodeFormatter;
@@ -42,6 +44,7 @@ import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.text.edits.MalformedTreeException;
 import org.eclipse.text.edits.TextEdit;
+import org.osgi.framework.Bundle;
 
 public class HandleProjectParallelism implements IHandleProjectParallelism {
 	private String classNameDeclaration;
@@ -78,7 +81,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		ICompilationUnitFilter filter = new CompilationUnitFilter();
 		filter.setCompilationUnit(cu);
 		filter.filter();
-		
+
 		setFieldsDeclaration(cu);
 		setTaskParallelCode(filter.getAnnotatedParallelTaskMethods());
 		setLoopParallelCode(filter.getAnnotatedParallelForMethods());
@@ -90,6 +93,10 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		setPipelineCode(filter.getPipelineMethods());
 		setImports(unit);
 
+		if(!filter.getAnnotatedGPUMethods().isEmpty()) {
+			addGpuLibraries(parallel);
+		}
+		
 		IPackageFragmentRoot srcFolder = parallel
 				.getPackageFragmentRoot(folder);
 		try {
@@ -110,6 +117,77 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		} catch (JavaModelException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public void addGpuLibraries(IJavaProject project) {
+		try {
+			// get the current class path entries
+			IClasspathEntry[] classPaths = project.getResolvedClasspath(false);
+			Bundle thisBundle = Activator.getDefault().getBundle();
+			String location = thisBundle.getLocation();
+			String bundlePath = location
+					.substring(location.indexOf("file") + 5);
+
+			// add our classpaths to a IClassPathEntry array and set it to the
+			// project
+			// check for architecture first
+			String os = System.getProperty("os.name").toLowerCase();
+			String arch = System.getProperty("os.arch").toLowerCase();
+			String archPath = "jcuda_windows_x86";
+			if(os.matches("[.*windows.*]{1,}") && arch.matches("[.*x86.*]{1,}")) {
+				archPath = "jcuda_windows_x86";
+			}
+			else if(os.matches("[.*windows.*]{1,}") && arch.matches("[.*amd64.*]{1,}")) {
+				archPath = "jcuda_windows_x86_64";
+			}
+			else if(os.matches("[.*linux.*]{1,}") && arch.matches("[.*amd64.*]{1,}")) {
+				archPath = "jcuda_linux_x86_64";
+			}
+			else {
+				throw new UnsupportedOperationException("This OS or architecture is not supported by JConqurr GPU module.");
+			}
+			IClasspathEntry[] modifiedClassPaths = null;
+			IPath libPath = new Path(bundlePath + IPath.SEPARATOR + "lib" + IPath.SEPARATOR + archPath)
+					.makeAbsolute();
+			IPath jCudaPath = libPath.append("jcuda-0.3.0a.jar");
+			IPath jCublasPath = libPath.append("jcublas-0.3.0a.jar");
+			IPath jCufftPath = libPath.append("jcudpp-0.3.0a.jar");
+			IPath jCudppPath = libPath.append("jcufft-0.3.0a.jar");
+			// create class path entries
+			IClasspathEntry cudaCpEntry = JavaCore.newLibraryEntry(jCudaPath,
+					null, null);
+			IClasspathEntry cublasCpEntry = JavaCore.newLibraryEntry(
+					jCublasPath, null, null);
+			IClasspathEntry cudppCpEntry = JavaCore.newLibraryEntry(jCudppPath,
+					null, null);
+			IClasspathEntry cufftCpEntry = JavaCore.newLibraryEntry(jCufftPath,
+					null, null);
+			// add them to project
+			modifiedClassPaths = addClassPathEntry(classPaths, cudaCpEntry);
+			modifiedClassPaths = addClassPathEntry(modifiedClassPaths,
+					cublasCpEntry);
+			modifiedClassPaths = addClassPathEntry(modifiedClassPaths,
+					cudppCpEntry);
+			modifiedClassPaths = addClassPathEntry(modifiedClassPaths,
+					cufftCpEntry);
+			// set the modified path finally
+			project.setRawClasspath(modifiedClassPaths, null);
+		} catch (JavaModelException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	private IClasspathEntry[] addClassPathEntry(IClasspathEntry[] currentList,
+			IClasspathEntry classPathToAdd) {
+		IClasspathEntry[] newClassPaths = new IClasspathEntry[currentList.length + 1];
+		for (int i = 0; i < currentList.length; i++) {
+			if (currentList[i].equals(classPathToAdd))
+				return currentList;
+			newClassPaths[i] = currentList[i];
+		}
+		newClassPaths[currentList.length] = classPathToAdd;
+		return newClassPaths;
 	}
 
 	/**
@@ -256,7 +334,8 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 	 * 
 	 * @param divideAndConquerMethods
 	 */
-	private void setDivideAndConquerCode(List<HashMap<String, MethodDeclaration>> divideAndConquerMethods) {
+	private void setDivideAndConquerCode(
+			List<HashMap<String, MethodDeclaration>> divideAndConquerMethods) {
 		this.divideAndConquerCode = "";
 		for (HashMap<String, MethodDeclaration> map : divideAndConquerMethods) {
 			System.out.println(map.get("caller"));
