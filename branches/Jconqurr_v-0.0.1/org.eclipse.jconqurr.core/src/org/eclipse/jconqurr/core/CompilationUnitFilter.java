@@ -40,6 +40,7 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 	private List<MethodDeclaration> annotatedGPUMethods=new ArrayList<MethodDeclaration>();
 	private List<MethodDeclaration> annotatedPipelineMethods=new ArrayList<MethodDeclaration>();
 	private List<TypeDeclaration> otherInnerclasses = new ArrayList<TypeDeclaration>();
+	private List<MethodDeclaration> annotatedSplitJoinMethods=new ArrayList<MethodDeclaration>();
 	
 	public List<MethodDeclaration> getAnnotatedGPUMethods(){
 		return annotatedGPUMethods;
@@ -109,7 +110,7 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 				otherInnerclasses.add(t);
 			}			
 		} 
-		System.out.println(otherInnerclasses.size());
+		//System.out.println(otherInnerclasses.size());
 		
 		compilationUnit.accept(methodVisitor);
 		//IDependencyAnalyser analyser=new DependencyAnalyser();
@@ -138,6 +139,11 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 								 else if (ab[i].getAnnotationType().getName()
 											.trim().equals("Pipeline")) {
 										 annotatedPipelineMethods.add(method);
+									} 
+								
+								 else if (ab[i].getAnnotationType().getName()
+											.trim().equals("SplitJoin")) {
+										 annotatedSplitJoinMethods.add(method);
 									} 
 								
 								else if (ab[i].getAnnotationType().getName()
@@ -228,6 +234,11 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 	@Override
 	public List<MethodDeclaration> getPipelineMethods() {
 		return annotatedPipelineMethods;
+	}
+	
+	@Override
+	public List<MethodDeclaration> getSplitJoinMethods() {
+		return annotatedSplitJoinMethods;
 	}
 
 }

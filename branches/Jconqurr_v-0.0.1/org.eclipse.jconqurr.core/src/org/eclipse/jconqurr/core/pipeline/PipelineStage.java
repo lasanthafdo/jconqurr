@@ -33,7 +33,7 @@ public class PipelineStage {
 	boolean hasOutClass;
 	String outClass = "";
 
-	//static String queueFields = "";
+	// static String queueFields = "";
 	private String otherVariableDeclarations = "";
 	static String className = "";
 	String classObjectName = "";
@@ -59,13 +59,11 @@ public class PipelineStage {
 		MethodInvocation m = directiveStage;
 		StringLiteral input = (StringLiteral) m.arguments().get(0);
 		StringLiteral output = (StringLiteral) m.arguments().get(1);
-		
-	
+
 		this.inputFields = input.getLiteralValue();
-		if(!output.getLiteralValue().equals("null")){
+		if (!output.getLiteralValue().equals("null")) {
 			this.outputFields = output.getLiteralValue();
-		}
-		else{
+		} else {
 			this.outputFields = "";
 		}
 
@@ -82,7 +80,7 @@ public class PipelineStage {
 				hasInClass = true;
 			}
 		}
-		setOtherVariables();
+		//setOtherVariables();
 		setThreadClassDeclaration();
 		setThreadVariablesDeclaration();
 		setThreadConstructor();
@@ -119,20 +117,20 @@ public class PipelineStage {
 		String variableInitialization = "";
 		// Set Variable List
 		for (String s : inArg) {
-			if(inArg.length!=0){
+			if (inArg.length != 0) {
 				if (!variableList.isEmpty()) {
 					variableList += ", ";
 				}
 				variableList += getVariableType(s) + " " + s;
-			}			
+			}
 		}
 		for (String s : outArg) {
-			if(!outArg[0].toString().equals("null")){
+			if (!outArg[0].toString().equals("null")) {
 				if (!variableList.isEmpty()) {
 					variableList += ", ";
 				}
 				variableList += getVariableType(s) + " " + s;
-			}			
+			}
 		}
 
 		// Set Variable Initialization
@@ -140,9 +138,9 @@ public class PipelineStage {
 			variableInitialization += "this." + s + "= " + s + ";";
 		}
 		for (String s : outArg) {
-			if(!outArg[0].toString().equals("null")){
+			if (!outArg[0].toString().equals("null")) {
 				variableInitialization += "this." + s + "= " + s + ";";
-			}			
+			}
 		}
 		threadConstructor = "public JPThread" + (stageNumber) + "("
 				+ variableList + ") {" + variableInitialization + "}";
@@ -154,34 +152,39 @@ public class PipelineStage {
 		String threadOutput = "";
 		String loopCondition = "";
 		String function = "";
+		String constrainingCondition = "";
 
 		// Set Thread Input
 		if (this.hasInClass) {
-			for (String s : this.pipelineHandler.getPipelineStages().get(this.stageNumber-2).outArg) {
+			for (String s : this.pipelineHandler.getPipelineStages().get(
+					this.stageNumber - 2).outArg) {
 				assignments += s + " = " + "jq." + s + ";";
 			}
 			threadInput += "JqOut" + (stageNumber - 1) + " jq = queueOut"
 					+ (stageNumber - 1) + ".take();" + assignments;
-		}else{
-			if(this.stageNumber>1){
-				threadInput += "this." + this.pipelineHandler.getPipelineStages().get(this.stageNumber-2).outArg[0]+" = queueOut"+(this.stageNumber-1)+".take();" ;			
+		} else {
+			if (this.stageNumber > 1) {
+				threadInput += "this."
+						+ this.pipelineHandler.getPipelineStages().get(
+								this.stageNumber - 2).outArg[0] + " = queueOut"
+						+ (this.stageNumber - 1) + ".take();";
 			}
-		} 
-		
-	
+		}
+
 		// Set Thread Output
 		if (this.hasOutClass) {
 			threadOutput += "JqOut" + (stageNumber) + " jq = new JqOut"
 					+ (stageNumber) + "(" + outputFields + ");";
 			for (String s : outArg) {
-				if(!(isPrimitive(getVariableType(s)))){
+				if (!(isPrimitive(getVariableType(s)))) {
 					threadOutput += "jq." + s + "=" + s + ".clone();";
-				}else{
+				} else {
 					threadOutput += "jq." + s + "=" + s + ";";
 				}
-				
+
 			}
-			threadOutput += "queueOut" + stageNumber + ".put((JqOut"+ this.stageNumber +")(jq)); \n";
+			threadOutput += "queueOut" + stageNumber + ".put((JqOut"
+					+ this.stageNumber + ")(jq)); \n";
 		} else {
 			if ((stageNumber == numberOfStages)
 					&& (this.outArg[0].toString().equals("null"))) {
@@ -207,73 +210,105 @@ public class PipelineStage {
 			function += s.toString();
 		}
 
-		// Set Run Method
-		this.runMethod = "public void run() {"  + "try { while ("
-				+ loopCondition + ") {" + threadInput + function + threadOutput
-				+ "} } catch (Exception e) { e.printStackTrace();}"
-				+ "isPThread" + (stageNumber) + "Done = true; ";
-		if (stageNumber == numberOfStages) {
-			runMethod += "jqBarrier.notifyBarrier(); }";
-		} else {
-			runMethod += "}";
+		// set constraining condition
+		if (this.stageNumber != 1) {
+			constrainingCondition = "!queueOut" + (this.stageNumber - 1)
+					+ ".isEmpty()";
 		}
+
+		// Set Run Method
+		if (constrainingCondition.isEmpty()) {
+			this.runMethod = "public void run() {" + "try { while ("
+					+ loopCondition + ") {" + threadInput + function
+					+ threadOutput
+					+ "} } catch (Exception e) { e.printStackTrace();}"
+					+ "isPThread" + (stageNumber) + "Done = true; ";
+			if (stageNumber == numberOfStages) {
+				runMethod += "jqBarrier.notifyBarrier(); }";
+			} else {
+				runMethod += "}";
+			}
+		} else {
+			this.runMethod = "public void run() {" + "try { while ("
+					+ loopCondition + ") { if(" + constrainingCondition + "){\n" + threadInput + function
+					+ threadOutput
+					+ "} } } catch (Exception e) { e.printStackTrace();}"
+					+ "isPThread" + (stageNumber) + "Done = true; ";
+			if (stageNumber == numberOfStages) {
+				runMethod += "jqBarrier.notifyBarrier(); }";
+			} else {
+				runMethod += "}";
+			}
+		}
+
 	}
 
 	private void setThreadDeclaration() {
 		String innerVariableList = "";
 		innerVariableList += inputFields;
-		if((!innerVariableList.isEmpty())&&(!outputFields.isEmpty())){
+		if ((!innerVariableList.isEmpty()) && (!outputFields.isEmpty())) {
 			innerVariableList += ",";
 		}
-		if(!outputFields.isEmpty()){
+		if (!outputFields.isEmpty()) {
 			innerVariableList += outputFields + "\n";
 		}
-		this.threadDeclaration += "Thread threadAtStage" + stageNumber + " = "
-				+ classObjectName + ".new JPThread" + stageNumber + "("
-				+ innerVariableList + "); \n threadAtStage"
-				+ stageNumber + ".start();";
+		this.threadDeclaration += "Thread threadAtStage" + stageNumber
+				+ " = "+ this.classObjectName + ".new JPThread" + stageNumber + "(" + innerVariableList
+				+ "); \n threadAtStage" + stageNumber + ".start();";
 	}
 
 	private void addQueueFields() {
-		if(!((this.stageNumber==numberOfStages)&&(this.outArg[0].toString().equals("null")))){
-			
+		if (!((this.stageNumber == numberOfStages) && (this.outArg[0]
+				.toString().equals("null")))) {
+
 			if (this.stageNumber == numberOfStages) {
 				if (this.hasOutClass) {
-					this.queueType += "JqOut"+this.stageNumber;
-					this.pipelineHandler.queueFileds.add("static BlockingQueue<JqOut" + stageNumber
-							+ "> queueOut" + stageNumber
-							+ " = new LinkedBlockingQueue<JqOut" + stageNumber
-							+ ">();");
-					
+					this.queueType += "JqOut" + this.stageNumber;
+					this.pipelineHandler.queueFileds
+							.add("static BlockingQueue<JqOut" + stageNumber
+									+ "> queueOut" + stageNumber
+									+ " = new LinkedBlockingQueue<JqOut"
+									+ stageNumber + ">();");
+
 				} else {
 					this.queueType = getQueueType(getVariableType(this.outArg[0]));
-					this.pipelineHandler.queueFileds.add("static BlockingQueue<" + this.queueType
-							+ "> queueOut" + stageNumber
-							+ " = new LinkedBlockingQueue<" + this.queueType + ">();");
+					this.pipelineHandler.queueFileds
+							.add("static BlockingQueue<" + this.queueType
+									+ "> queueOut" + stageNumber
+									+ " = new LinkedBlockingQueue<"
+									+ this.queueType + ">();");
 				}
 			} else {
 				if (this.hasOutClass) {
-					this.queueType += "JqOut"+this.stageNumber;
-					this.pipelineHandler.queueFileds.add("static BlockingQueue<JqOut" + stageNumber
-							+ "> queueOut" + stageNumber
-							+ " = new ArrayBlockingQueue<JqOut" + stageNumber
-							+ ">(10);");
+					this.queueType += "JqOut" + this.stageNumber;
+					this.pipelineHandler.queueFileds
+							.add("static BlockingQueue<JqOut" + stageNumber
+									+ "> queueOut" + stageNumber
+									+ " = new ArrayBlockingQueue<JqOut"
+									+ stageNumber + ">(10);");
 				} else {
 					this.queueType = getQueueType(getVariableType(this.outArg[0]));
-					this.pipelineHandler.queueFileds.add("static BlockingQueue<" + this.queueType
-							+ "> queueOut" + stageNumber
-							+ " = new ArrayBlockingQueue<" + this.queueType + ">(10);");
+					this.pipelineHandler.queueFileds
+							.add("static BlockingQueue<" + this.queueType
+									+ "> queueOut" + stageNumber
+									+ " = new ArrayBlockingQueue<"
+									+ this.queueType + ">(10);");
 				}
 			}
+		} else {
+			this.pipelineHandler.queueFileds.remove(this.stageNumber - 2);
+			System.out.println(this.pipelineHandler.getPipelineStages().get(
+					this.stageNumber - 2).queueType);
+			this.pipelineHandler.queueFileds.add("static BlockingQueue<"
+					+ this.pipelineHandler.getPipelineStages().get(
+							this.stageNumber - 2).queueType
+					+ "> queueOut"
+					+ (stageNumber - 1)
+					+ " = new LinkedBlockingQueue<"
+					+ this.pipelineHandler.getPipelineStages().get(
+							this.stageNumber - 2).queueType + ">();");
 		}
-		else{
-			this.pipelineHandler.queueFileds.remove(this.stageNumber-2);
-			System.out.println(this.pipelineHandler.getPipelineStages().get(this.stageNumber-2).queueType);
-			this.pipelineHandler.queueFileds.add("static BlockingQueue<" + this.pipelineHandler.getPipelineStages().get(this.stageNumber-2).queueType
-					+ "> queueOut" + (stageNumber-1)
-					+ " = new LinkedBlockingQueue<" + this.pipelineHandler.getPipelineStages().get(this.stageNumber-2).queueType + ">();");
-		}
-		
+
 	}
 
 	private void setOutClass() {
@@ -281,7 +316,7 @@ public class PipelineStage {
 		String variableList = "";
 		String variableInitialization = "";
 		String constructor = "";
-		
+
 		// Set Variable Declaration
 		for (String s : this.outArg) {
 			variableDeclaration += getVariableType(s) + " " + s + ";";
@@ -293,8 +328,7 @@ public class PipelineStage {
 				variableList += ",";
 			}
 			variableList += getVariableType(s) + " " + s;
-		}		
-		
+		}
 
 		// Set Variable Initialization
 		for (String s : this.outArg) {
@@ -303,26 +337,25 @@ public class PipelineStage {
 		// Set Constructor
 		constructor = "JqOut" + stageNumber + "(" + variableList + ") {"
 				+ variableInitialization + "}";
-		
-		
+
 		// Set OutClass
-		this.outClass = "class JqOut" + stageNumber + " {" + variableDeclaration
-				+ constructor + "\n}";
+		this.outClass = "class JqOut" + stageNumber + " {"
+				+ variableDeclaration + constructor + "\n}";
 	}
 
 	private void setBarrierFields() {
-		barrierFields += "static boolean isPThread" + stageNumber
+		barrierFields += "boolean isPThread" + stageNumber
 				+ "Done = false; \n";
 	}
 
-	private void setOtherVariables() {
-		if (!otherVariableDeclarations.isEmpty()) {
-			otherVariableDeclarations += "static " + className
-					+ classObjectName + " = new " + className + "();";
-			otherVariableDeclarations += "static JqBarrier jqBarrier = "
-					+ classObjectName + ".new JqBarrier();";
-		}
-	}
+//	private void setOtherVariables() {
+//		if (!otherVariableDeclarations.isEmpty()) {
+//			otherVariableDeclarations += "static " + className
+//					+ classObjectName + " = new " + className + "();";
+//			otherVariableDeclarations += "static JqBarrier jqBarrier = "
+//					+ classObjectName + ".new JqBarrier();";
+//		}
+//	}
 
 	public String getVariableType(String variable) {
 		String typeOfVariable = "";
@@ -347,7 +380,7 @@ public class PipelineStage {
 	}
 
 	public String getThreadClass() {
-		return this.threadClass+ "\n";
+		return this.threadClass + "\n";
 	}
 
 	public String getThreadDeclaration(String className) {
@@ -375,8 +408,8 @@ public class PipelineStage {
 			return type;
 		}
 	}
-	
-	public boolean isPrimitive(String str){
+
+	public boolean isPrimitive(String str) {
 		boolean isPrimitive = false;
 		String[] primitives = new String[8];
 		primitives[0] = "byte";
@@ -387,8 +420,8 @@ public class PipelineStage {
 		primitives[5] = "double";
 		primitives[6] = "char";
 		primitives[7] = "boolean";
-		for(String s:primitives){
-			if(s.equals(str)){
+		for (String s : primitives) {
+			if (s.equals(str)) {
 				isPrimitive = true;
 				break;
 			}

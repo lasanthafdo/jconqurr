@@ -61,5 +61,7 @@ public interface ICompilationUnitFilter {
 
 	public List<TypeDeclaration> getOtherInnerClasses();
 
+	public List<MethodDeclaration> getSplitJoinMethods();
+
 	//public void removeUnwantedStuff();
 }
