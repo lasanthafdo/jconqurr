@@ -4,9 +4,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import javax.swing.text.BadLocationException;
-
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.jconqurr.core.ast.visitors.FieldDeclarationVisitor;
@@ -20,6 +17,8 @@ import org.eclipse.jconqurr.core.gpu.GPUHandler;
 import org.eclipse.jconqurr.core.gpu.IGPUHandler;
 import org.eclipse.jconqurr.core.pipeline.IPipelineHandler;
 import org.eclipse.jconqurr.core.pipeline.PipelineHandler;
+import org.eclipse.jconqurr.core.splitjoin.ISplitJoinHandler;
+import org.eclipse.jconqurr.core.splitjoin.SplitJoinHandler;
 import org.eclipse.jconqurr.core.task.ITaskMethod;
 import org.eclipse.jconqurr.core.task.TaskMethod;
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -62,8 +61,10 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 	private String divideAndConquerCode;
 	private String gpuCode;
 	private String pipelineClassFields = "";
+	private String splitJoinClassFields = "";
 	private String sharedFields="";
-	private String pipelineCode;
+	private String pipelineCode="";
+	private String splitJoinCode="";
 	private static String srcPath;
 
 	public static String getSrcPath() {
@@ -99,6 +100,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		setOtherMethods(filter.getNotAnnotatedMethods());		
 		setClassName(cu);
 		setPipelineCode(filter.getPipelineMethods());
+		setSplitJoinCode(filter.getSplitJoinMethods());
 		setImports(unit);
 		
 		
@@ -147,22 +149,26 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 	 */
 	private String generateClass() {
 		 
-		String execImports;
-		String gpuImports;
-		String pipelineImports;
+		String execImports = "";
+		String gpuImports = "";;
+		String pipelineImports = "";
+		String splitJoinImports = "";
+		String divideAndConqerImports = "";
 		String exec;
+		
 		if (!(this.gpuCode.equals(""))) {
-			gpuImports = "import java.io.*;" + "\n" + "import jcuda.*;" + "\n"
+			gpuImports += "import java.io.*;" + "\n" + "import jcuda.*;" + "\n"
 					+ "import jcuda.driver.*;";
-		} else {
-			gpuImports = "";
 		}
-		if (!(this.pipelineCode.equals(""))) {
-			pipelineImports = "import java.util.concurrent.*;" + "\n";
-
-		} else {
-			pipelineImports = "";
+		
+		if (!this.pipelineCode.isEmpty()) {
+			pipelineImports += "import java.util.concurrent.*;" + "\n";
+		} 
+		
+		if (!this.splitJoinCode.isEmpty()) {
+			splitJoinImports += "import java.util.concurrent.*;" + "\n";
 		}
+		
 		if (!(this.loopParallelCode.equals(""))
 				|| !(this.taskParallelCode.equals(""))) {
 			execImports = "import java.util.concurrent.ExecutorService;" + "\n"
@@ -174,14 +180,14 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		} else {
 			execImports = "";
 		}
-		String divideAndConqerImports;
-		if (!(this.divideAndConquerCode.equals(""))) {
+		
+		
+		if (!this.divideAndConquerCode.isEmpty()) {
 			divideAndConqerImports = "import EDU.oswego.cs.dl.util.concurrent.FJTask;"
 					+ "\n"
 					+ "import EDU.oswego.cs.dl.util.concurrent.FJTaskRunnerGroup;\n";
-		} else {
-			divideAndConqerImports = "";
-		}
+		} 
+		
 		if (!(this.loopParallelCode.equals(""))
 				|| !(this.taskParallelCode.equals(""))) {
 			exec = "static ExecutorService exec = Executors.newCachedThreadPool();"
@@ -192,10 +198,10 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 
 		String src = "package " + packageName + ";" + "\n" + imports
 				+ execImports + divideAndConqerImports + gpuImports
-				+ pipelineImports + "\n " + classNameDeclaration + "{"
-				+ fieldDeclarations+sharedFields + pipelineClassFields + exec
+				+ pipelineImports + splitJoinImports +"\n " + classNameDeclaration + "{"
+				+ fieldDeclarations+sharedFields + pipelineClassFields + splitJoinClassFields + exec
 				+ taskParallelCode + loopParallelCode + divideAndConquerCode
-				+ gpuCode + pipelineCode + otherMethods + otherInnerClasses + "}";
+				+ gpuCode + pipelineCode + splitJoinCode + otherMethods + otherInnerClasses + "}";
 
 		return src;
 
@@ -236,7 +242,20 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 			pipelineHandler.init();
 			this.pipelineCode = this.pipelineCode
 					+ pipelineHandler.getModifiedMethod(className);
-			pipelineClassFields = pipelineHandler.getFields(className);
+			//pipelineClassFields = pipelineHandler.getFields(className);
+		}
+
+	}
+	
+	private void setSplitJoinCode(List<MethodDeclaration> splitJoinMethods) {
+		this.splitJoinCode = "";
+		for (MethodDeclaration method : splitJoinMethods) {
+			ISplitJoinHandler splitJoinHandler = new SplitJoinHandler();
+			splitJoinHandler.setMethod(method);
+			splitJoinHandler.init();
+			this.splitJoinCode = this.splitJoinCode
+					+ splitJoinHandler.getModifiedMethod(className);
+			//splitJoinClassFields = splitJoinHandler.getFields(className);
 		}
 
 	}
@@ -336,12 +355,17 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		String name = "";
 		String superType = "";
 		String interfaceTypes = "";
+		boolean isInterface = false;
+		
 		if (typeVisitor.getTypeDeclarations().size() >= 1) {
 			TypeDeclaration t = typeVisitor.getTypeDeclarations().get(0);
 			ITypeBinding binding = t.resolveBinding();
 			// System.out.println(t.SUPERCLASS_TYPE_PROPERTY);
 			for (int i = 0; i < t.modifiers().size(); i++) {
 				modifiers += t.modifiers().get(i) + " ";
+			}
+			if(t.isInterface()){
+				isInterface = true;
 			}
 			name = t.getName().toString();
 			if (t.getSuperclassType() != null) {
@@ -374,8 +398,15 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 
 		if(name != null)
 			this.className = name;
-		this.classNameDeclaration = modifiers + " class " + name + superType
-				+ interfaceTypes;
+		if(isInterface){
+			this.classNameDeclaration = modifiers + " interface " + name + superType
+			+ interfaceTypes;
+		}
+		else{
+			this.classNameDeclaration = modifiers + " class " + name + superType
+			+ interfaceTypes;
+		}
+		
 		System.out.println(this.classNameDeclaration);
 	}
 

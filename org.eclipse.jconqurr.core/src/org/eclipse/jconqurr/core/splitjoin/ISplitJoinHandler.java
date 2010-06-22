@@ -1,9 +1,9 @@
-package org.eclipse.jconqurr.core.pipeline;
+package org.eclipse.jconqurr.core.splitjoin;
 
 import java.util.List;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 
-public interface IPipelineHandler {
+public interface ISplitJoinHandler {
 	public String getModifiedMethod(String className);
 
 	public List<String> getTasks();

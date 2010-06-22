@@ -1,11 +1,10 @@
-package org.eclipse.jconqurr.core.pipeline;
+package org.eclipse.jconqurr.core.splitjoin;
 
 import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.jconqurr.core.ast.visitors.MethodInvocationVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.SimpleNameVisitor; //import org.eclipse.jconqurr.core.ast.visitors.StatementVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.VariableDeclarationVisitor;
-import org.eclipse.jconqurr.core.splitjoin.SplitJoinStage;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.IMethodBinding;
@@ -17,67 +16,93 @@ import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.WhileStatement;
 
-public class PipelineHandler implements IPipelineHandler {
+public class SplitJoinHandler implements ISplitJoinHandler {
 	private MethodDeclaration method;
 	private List<VariableDeclarationStatement> variableDeclarationStatements = new ArrayList<VariableDeclarationStatement>();
-	private String pipelineOutPut = "";
+	//private String pipelineOutPut = "";
 	private List<SimpleName> variables = new ArrayList<SimpleName>();
-	private String pipelineMethod = "";
-	private List<Statement> statementBeforePipeline = new ArrayList<Statement>();
-	private String stmtBeforePipeline = "";
+	private String splitJoinMethod = "";
+	private List<Statement> statementsBeforeSplitJoin = new ArrayList<Statement>();
+	private String stmtBeforeSplitJoin = "";
 	private String expressionOfWhileStatement = "";
-	private List<PipelineStage> pipelineStages = new ArrayList<PipelineStage>();
+	private List<SplitJoinStage> splitJoinStages = new ArrayList<SplitJoinStage>();
 	private String className = "";
-	List<String> queueFileds = new ArrayList<String>();
+	List<String> queueFieldsList = new ArrayList<String>();
 	private String queueFields="";
+	List<String> commonVariablesList = new ArrayList<String>();
+	private String commonVariables = "";
+	List<String> barrierFieldsList = new ArrayList<String>();
+	private String barrierFields = "";
+	protected String jqSplitCounter = "";
 
 	public String getClassName() {
 		return className;
 	}
 
-	public List<PipelineStage> getPipelineStages() {
-		return pipelineStages;
+	public List<SplitJoinStage> getSplitJoinStages() {
+		return splitJoinStages;
 	}
 
-	private String stmtAfterPipeline = "";
+	private String stmtAfterSplitJoin = "";
 
 	@Override
-	public String getModifiedMethod(String className) {
+	public String getModifiedMethod(String className) {	
+		
+		this.className = className;
 		String innerClasses = "";
 		String threadStatements = "";
-		for (PipelineStage p : pipelineStages) {
+		for (SplitJoinStage p : splitJoinStages) {
 			p.processStage(className);
 			innerClasses += p.getThreadClass();
 			threadStatements += p.getThreadDeclaration(className);
 
 		}
+		for (SplitJoinStage p : splitJoinStages) {
+			p.setOtherVariables();
+		}
+		setSplitJoinMethod(threadStatements);
 		
-		setPipelineMethod(threadStatements);
-		System.out.println(pipelineMethod + innerClasses + getBarrierClass());
-		return getFields(className)+pipelineMethod + innerClasses + getBarrierClass();
+		return getFields(className) + splitJoinMethod + innerClasses + getBarrierClass();
 	}
 
-	public String getFields(String className) {
-		this.queueFields = "";		
-		setQueueFields();		
-		this.queueFileds.clear();	
-		
+	public String getFields(String className) {	
+		this.commonVariables = "";
+		this.barrierFields = "";
+		this.queueFields = "";
 		
 		setQueueFields();
+		setCommonVariables();
+		setBarrierFields();
+		
+		this.commonVariablesList.clear();
+		this.barrierFieldsList.clear();
+		this.queueFieldsList.clear();
+		
 		String fields = "\n";
-		fields += PipelineStage.barrierFields;
+		fields += this.commonVariables;
+		fields += this.barrierFields;
 		fields += this.queueFields;
-		fields += "static " + className + " jq" + className + "= new "
-				+ className + "();";
-		fields += "static Barrier jqBarrier = new Barrier();";
+		
 		
 		return fields;
 	}
 	
+	private void setCommonVariables(){
+		this.commonVariables += "\n";
+		for(String s:commonVariablesList){
+			commonVariables += s.toString() + "\n";
+		}
+	}
+	
+	private void setBarrierFields(){
+		this.barrierFields += "\n";
+		for(String s:barrierFieldsList){
+			this.barrierFields += s.toString() + "\n";
+		}
+	}
+	
 	private void setQueueFields(){
-		queueFields += "\n";
-		
-		for(String s:queueFileds){
+		for(String s:queueFieldsList){
 			queueFields += s.toString() + "\n";
 		}
 	} 
@@ -87,7 +112,7 @@ public class PipelineHandler implements IPipelineHandler {
 		return null;
 	}
 
-	private void setPipelineMethod(String threads) {
+	private void setSplitJoinMethod(String threads) {
 		IMethodBinding binding = method.resolveBinding();
 		String decl = "";
 		if (method.parameters().size() > 0) {
@@ -126,8 +151,8 @@ public class PipelineHandler implements IPipelineHandler {
 
 		String barrierInvokation = "jqBarrier.process();";
 
-		pipelineMethod = decl + "{" + stmtBeforePipeline + "\n" + threads
-				+ barrierInvokation + stmtAfterPipeline + "}";
+		splitJoinMethod = decl + "{" + stmtBeforeSplitJoin + "\n" + threads
+				+ barrierInvokation + stmtAfterSplitJoin + "}";
 	}
 
 	@Override
@@ -138,8 +163,8 @@ public class PipelineHandler implements IPipelineHandler {
 		this.method.accept(vVisitor);
 		this.variableDeclarationStatements = vVisitor.getVariablesDeclaraions();
 		int stageCounter = 0;
-		PipelineStage.barrierFields = "";
-		PipelineStage.numberOfStages = 0;
+		//SplitJoinStage.barrierFields = "";
+		SplitJoinStage.numberOfStages = 0;
 		
 		List<Statement> stmts = method.getBody().statements();
 		List<Statement> whileStmts = null;
@@ -147,8 +172,8 @@ public class PipelineHandler implements IPipelineHandler {
 			if (m.toString().trim().startsWith("Directives.pipelineStart")) {
 				int i = 0;
 				while (!(stmts.get(i).toString().startsWith(m.toString()))) {
-					statementBeforePipeline.add(stmts.get(i));
-					stmtBeforePipeline += stmts.get(i);
+					statementsBeforeSplitJoin.add(stmts.get(i));
+					stmtBeforeSplitJoin += stmts.get(i);
 					i++;
 				}
 				try {
@@ -163,13 +188,13 @@ public class PipelineHandler implements IPipelineHandler {
 
 				}
 			}
-			if (m.toString().trim().startsWith("Directives.pipelineEnd")) {
+			else if (m.toString().trim().startsWith("Directives.pipelineEnd")) {
 				m.getStartPosition();
 
 				boolean detected = false;
 				for (int j = 0; j < stmts.size(); j++) {
 					if (detected) {
-						stmtAfterPipeline += stmts.get(j);
+						stmtAfterSplitJoin += stmts.get(j);
 					}
 					if (stmts.get(j).toString().startsWith(m.toString())) {
 						detected = true;
@@ -177,25 +202,39 @@ public class PipelineHandler implements IPipelineHandler {
 				}
 			}
 
-			if (m.toString().trim().startsWith("Directives.pipelineStage")) {
+			else if ((m.toString().trim().startsWith("Directives.pipelineStage"))||(m.toString().trim().startsWith("Directives.pipelineSplitStage"))) {
 				List<Statement> statments = getNextStageStatement(m);
 				stageCounter++;
-				pipelineStages.add(new PipelineStage(m, statments,
-						statementBeforePipeline, expressionOfWhileStatement,
-						stageCounter, this));
+				if(m.toString().trim().startsWith("Directives.pipelineStage")){
+					splitJoinStages.add(new SplitJoinStage(m, statments,
+							statementsBeforeSplitJoin, expressionOfWhileStatement,
+							stageCounter, this, false));
+				}
+				else{
+					splitJoinStages.add(new SplitJoinStage(m, statments,
+							statementsBeforeSplitJoin, expressionOfWhileStatement,
+							stageCounter, this, true));
+				}
+				
 			}
-			if (m.toString().trim().startsWith("Directives.pipelineOutput()")) {
+			
+			/*else if (m.toString().trim().startsWith("Directives.pipelineSplitStage")) {
+				List<Statement> statments = getNextStageStatement(m);
+				stageCounter++;
+				
+			}*/
+			/*if (m.toString().trim().startsWith("Directives.pipelineOutput()")) {
 				pipelineOutPut = getNextStatement(m).get(0).toString();
 				SimpleNameVisitor visitor = new SimpleNameVisitor();
 				getNextStatement(m).get(0).accept(visitor);
 				addVariables(visitor.getVariables());
-			}
+			}*/
 		}
-		PipelineStage.numberOfStages = pipelineStages.size();
+		SplitJoinStage.numberOfStages = splitJoinStages.size();
 	}
 
 	private String getBarrierClass() {
-		String classDecl = "static class Barrier";
+		String classDecl = "class JqBarrier";
 		String fields = "boolean isCompleted = false;";
 		String processMethod = "synchronized void process() {"
 				+ "while (!isCompleted) {"
@@ -270,9 +309,7 @@ public class PipelineHandler implements IPipelineHandler {
 			List<Statement> statements = block.statements();
 			for (int i = 0; i < statements.size(); i++) {
 				if (statements.get(i).getStartPosition() == node.getStartPosition()	&& (i + 1 < statements.size())) {
-					while (((i + 1) < statements.size())
-							&& (!statements.get(i + 1).toString().trim()
-									.startsWith("Directives.pipelineStage"))) {
+					while (((i + 1) < statements.size()) && ((!statements.get(i + 1).toString().trim().startsWith("Directives.pipelineStage"))&&(!statements.get(i + 1).toString().trim().startsWith("Directives.pipelineSplitStage")))) {
 						nextStatement.add(statements.get(i + 1));
 						i++;
 					}
