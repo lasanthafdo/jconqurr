@@ -1,6 +1,7 @@
 package org.eclipse.jconqurr.core.build;
 
 import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.JavaModelException;
 
 public interface IBuildJconqurrProjManager {
 
