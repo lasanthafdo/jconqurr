@@ -712,9 +712,16 @@ public class SplitJoinStage {
 	private void addQueueFieldsForOtherStages() {
 		String queueFields = "";
 
-		if (!((this.stageNumber == numberOfStages) && (this.outArg[0].toString().equals("null")))) {			
+		if (!((this.stageNumber == numberOfStages) && (this.outArg[0].toString().equals("null")))) {
+			if(this.stageNumber == numberOfStages){
 				queueFields += "static BlockingQueue<" + this.queueType + "> queueOut" + this.stageNumber
-						+ " = new ArrayBlockingQueue<" + this.queueType + ">(10); \n";			
+				+ " = new LinkedBlockingQueue<" + this.queueType + ">(); \n";	
+			}
+			else{
+				queueFields += "static BlockingQueue<" + this.queueType + "> queueOut" + this.stageNumber
+				+ " = new ArrayBlockingQueue<" + this.queueType + ">(10); \n";	
+			}
+						
 		} else {
 			this.splitJoinHandler.queueFieldsList.remove(this.stageNumber - 2);
 			if ((this.stageNumber != 1) && (this.splitJoinHandler.getSplitJoinStages().get(this.stageNumber - 2).isSplitStage)) {				
