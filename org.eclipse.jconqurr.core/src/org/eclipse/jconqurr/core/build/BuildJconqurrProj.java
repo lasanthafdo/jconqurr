@@ -3,9 +3,11 @@ package org.eclipse.jconqurr.core.build;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IProjectDescription;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
@@ -23,19 +25,33 @@ public class BuildJconqurrProj implements IBuildJconqurrProjManager {
 	 * @see IBuildJconqurrProjManager#createProject(IJavaProject)
 	 */
 	public IJavaProject createProject(IJavaProject selectedProject) {
+		IJavaProject projectToReturn = null;
 		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
 		IProject project = root.getProject("Jq"
 				+ selectedProject.getElementName());
-		List<IPath>libraryPath=new ArrayList<IPath>();
+		List<IPath> JCUDALibraryPath = new ArrayList<IPath>();
+		List<IPath> libraryPath = new ArrayList<IPath>();
+		// get the library paths
 		try {
 			IPackageFragmentRoot[] roots = selectedProject
 					.getPackageFragmentRoots();
 			for (IPackageFragmentRoot r : roots) {
-				if(!(r.getElementName().equals("src"))){
+				if (!(r.getElementName().equals("src"))) {
 					libraryPath.add(r.getPath());
 				}
+				if (r.getElementName().equals("jcublas-0.2.3.jar")) {
+					JCUDALibraryPath.add(r.getPath());
+				} else if (r.getElementName().equals("jcuda-0.2.3.jar")) {
+					JCUDALibraryPath.add(r.getPath());
+				} else if (r.getElementName().equals("jcudpp-0.2.3.jar")) {
+					JCUDALibraryPath.add(r.getPath());
+				} else if (r.getElementName().equals("jcufft-0.2.3.jar")) {
+					JCUDALibraryPath.add(r.getPath());
+				}
+
 			}
 		} catch (JavaModelException e2) {
+			// TODO Auto-generated catch block
 			e2.printStackTrace();
 		}
 		if (!project.exists()) {
@@ -53,35 +69,69 @@ public class BuildJconqurrProj implements IBuildJconqurrProjManager {
 						JavaCore.newSourceEntry(project.getFullPath().append(
 								"src")),
 						JavaRuntime.getDefaultJREContainerEntry() };
-				IClasspathEntry[] libPaths=new IClasspathEntry[libraryPath.size()+1];
-				for(int i=0;i<libraryPath.size();i++){
-					libPaths[i+1]=JavaCore.newLibraryEntry((libraryPath.get(i)),
-							null, null, true);
+				if (JCUDALibraryPath.size() == 0) {
+					IClasspathEntry[] paths = {
+							JavaCore.newSourceEntry(project.getFullPath()
+									.append("src")),
+							JavaRuntime.getDefaultJREContainerEntry() };
+					buildPath = paths;
+
+				} else {
+					IClasspathEntry[] paths = {
+							JavaCore.newSourceEntry(project.getFullPath()
+									.append("src")),
+							JavaRuntime.getDefaultJREContainerEntry(),
+							JavaCore.newLibraryEntry((JCUDALibraryPath.get(0)),
+									null, null, true),
+							JavaCore.newLibraryEntry((JCUDALibraryPath.get(1)),
+									null, null, true),
+							JavaCore.newLibraryEntry((JCUDALibraryPath.get(2)),
+									null, null, true),
+							JavaCore.newLibraryEntry((JCUDALibraryPath.get(3)),
+									null, null, true) };
+					buildPath = paths;
 				}
-				libPaths[0]=JavaCore.newSourceEntry(project.getFullPath()
+				IClasspathEntry[] libPaths = new IClasspathEntry[libraryPath
+						.size() + 1];
+				for (int i = 0; i < libraryPath.size(); i++) {
+					libPaths[i + 1] = JavaCore.newLibraryEntry((libraryPath
+							.get(i)), null, null, true);
+				}
+				libPaths[0] = JavaCore.newSourceEntry(project.getFullPath()
 						.append("src"));
-				buildPath=libPaths;
+				buildPath = libPaths;
 				javaProject.setRawClasspath(buildPath, project.getFullPath()
 						.append("bin"), null);
 				// create source folder
 				IFolder folder = project.getFolder("src");
 				folder.create(true, true, null);
-				IPackageFragmentRoot srcFolder = javaProject
-						.getPackageFragmentRoot(folder);
-			} catch (CoreException e) {
-				try {
-					return (IJavaProject) project.getNature(JavaCore.NATURE_ID);
-				} catch (CoreException e1) {
-					e1.printStackTrace();
+				// following segment copies all non-java resources which are
+				// files and folders of the project directly.
+				Object[] nonJavaRes = null;
+				nonJavaRes = selectedProject.getNonJavaResources();
+				for (Object resource : nonJavaRes) {
+					if (resource instanceof IFile) {
+						IFile srcFile = (IFile) resource;
+						IFile destFile = project.getFile(srcFile.getName());
+						if (!destFile.exists() && !srcFile.isHidden()) {
+							destFile.create(srcFile.getContents(), IResource.NONE, null);
+						}
+					}
 				}
+
+			} catch (CoreException e) {
+				e.printStackTrace();
 			}
 		}
+		
 		try {
-			return (IJavaProject) project.getNature(JavaCore.NATURE_ID);
+			projectToReturn = (IJavaProject) project.getNature(JavaCore.NATURE_ID);
 		} catch (CoreException e1) {
 			e1.printStackTrace();
-			return null;
 		}
+		
+		return projectToReturn;
 	}
 
 }
+ 
