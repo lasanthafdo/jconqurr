@@ -41,9 +41,15 @@ public class AddJConqNature extends AbstractHandler {
 				IPath annotationPath = libPath.append("org.eclipse.jconqurr.annotations.jar");
 				IClasspathEntry aptCpEntry = JavaCore.newLibraryEntry(annotationPath, null, null);
 				modifiedClassPaths = addClassPathEntry(classPaths, aptCpEntry);
+				
 				IPath directivesPath = libPath.append("org.eclipse.jconqurr.directives.jar");
 				IClasspathEntry drctvsCpEntry = JavaCore.newLibraryEntry(directivesPath, null, null);
 				modifiedClassPaths = addClassPathEntry(modifiedClassPaths, drctvsCpEntry);
+				
+				IPath concurrentLibPath = libPath.append("concurrent.jar");
+				IClasspathEntry cncrntCpEntry = JavaCore.newLibraryEntry(concurrentLibPath, null, null);
+				modifiedClassPaths = addClassPathEntry(modifiedClassPaths, cncrntCpEntry);
+				
 				selectedProject.setRawClasspath(modifiedClassPaths, null);
 				
 				// add JConq nature
