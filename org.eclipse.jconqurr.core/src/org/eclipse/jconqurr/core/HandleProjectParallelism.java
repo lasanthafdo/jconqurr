@@ -40,6 +40,7 @@ import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.formatter.CodeFormatter;
 import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.text.edits.MalformedTreeException;
@@ -105,16 +106,21 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 				IPackageFragment fragment = srcFolder.createPackageFragment(
 						dec[0].getElementName(), true, null);
 				packageName = dec[0].getElementName();
-				try {
 					String src = formatCode(generateClass());
 
 					ICompilationUnit cunit = fragment.createCompilationUnit(
 							unit.getElementName(), src, true, null);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+					if(cunit == null) {
+						System.err.println("Error creating compilation unit for" + unit.getElementName());
+					}
 			}
 		} catch (JavaModelException e) {
+			e.printStackTrace();
+		} catch (BadLocationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -456,6 +462,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 	 * @throws org.eclipse.jface.text.BadLocationException
 	 * @throws IOException
 	 */
+	@SuppressWarnings("unchecked")
 	private String formatCode(String src)
 			throws org.eclipse.jface.text.BadLocationException, IOException {
 		// take default Eclipse formatting options

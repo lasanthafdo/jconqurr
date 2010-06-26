@@ -1,10 +1,10 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: JConqurr
+Bundle-Name: %Bundle-Name.0
 Bundle-SymbolicName: org.eclipse.jconqurr.core;singleton:=true
-Bundle-Version: 1.1.0.v20100606
+Bundle-Version: 1.1.0.v20100623
 Bundle-Activator: org.eclipse.jconqurr.core.Activator
-Bundle-Vendor: PI-37
+Bundle-Vendor: %Bundle-Vendor.0
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
  org.eclipse.jdt.core;bundle-version="3.5.1",
@@ -26,6 +26,7 @@ Export-Package: org.eclipse.jconqurr.analyzer,
  org.eclipse.jconqurr.core.gpu,
  org.eclipse.jconqurr.core.pipeline,
  org.eclipse.jconqurr.core.task,
+ org.eclipse.jconqurr.core.test.loops,
  org.eclipse.jconqurr.internal.ui.actions;x-internal:=true,
  org.eclipse.jconqurr.internal.ui.commands;x-internal:=true,
  org.eclipse.jconqurr.rewrite
