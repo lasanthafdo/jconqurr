@@ -5,11 +5,11 @@
          point="org.eclipse.ui.commands">
       <command
             id="org.eclipse.jconqurr.core.build"
-            name="Build Parallel Proj">
+            name="%command.name">
       </command>
       <command
             id="org.eclipse.jconqurr.core.addnature"
-            name="Add JConqurr Nature">
+            name="%command.name.0">
       </command>
    </extension>
    <extension
@@ -28,15 +28,15 @@
       <menuContribution
             locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
          <menu
-               label="JConqurr">
+               label="%menu.label">
             <command
                   commandId="org.eclipse.jconqurr.core.addnature"
-                  label="Add JConqurr Nature"
+                  label="%command.label"
                   style="push">
             </command>
             <command
                   commandId="org.eclipse.jconqurr.core.build"
-                  label="JQ-Build Parallel Project "
+                  label="%command.label.0"
                   style="push">
             </command>
          </menu>
@@ -50,7 +50,7 @@
             objectClass="org.eclipse.core.resources.IProject">
          <menu
                id="org.eclipse.jconqurr.core.menu1"
-               label="Jconqurr">
+               label="%menu.label.0">
             <separator
                   name="group1">
             </separator>
@@ -58,14 +58,14 @@
          <action
                class="org.eclipse.jconqurr.internal.ui.actions.ConvertParallelAction"
                id="org.eclipse.jconqurr.core.buildAction"
-               label="JQ- Build Parallel Project"
+               label="%action.label"
                menubarPath="org.eclipse.jconqurr.ui.menu1/group1">
          </action>
       </objectContribution>
    </extension>
    <extension
          id="org.eclipse.jconqurr.parallelnature"
-         name="JConqurr Nature"
+         name="%extension.name"
          point="org.eclipse.core.resources.natures">
       <runtime>
          <run

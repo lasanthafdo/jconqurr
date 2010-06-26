@@ -163,6 +163,7 @@ public class GPUHandler implements IGPUHandler {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	private void handleMethodBody() {
 		String body = method.getBody().toString();
 		int d = body.indexOf("for");
@@ -180,15 +181,13 @@ public class GPUHandler implements IGPUHandler {
 		List<Block> blocks = blockVisitor.getBlocks();
 		int position = -1;
 		for (Block b : blocks) {
-			List stmt = b.statements();
-			for (int i = 0; i < stmt.size(); i++) {
-
-				if (((Statement) stmt.get(i)).getNodeType() == Statement.FOR_STATEMENT) {
-					position = method.getBody().toString().indexOf(
-							((Statement) stmt.get(i)).toString()
-									.substring(0, 5));
-					System.out.println(position);
-					stmt.remove(i);
+			List<Statement> stmtList = b.statements();
+			for (int i = 0; i < stmtList.size(); i++) {
+				Statement stmt = stmtList.get(i);
+				if (stmt.getNodeType() == Statement.FOR_STATEMENT) {
+					position = method.getBody().toString().indexOf(stmt.toString().substring(0, 5));
+					System.out.println("Position:" + position);
+					//stmtList.remove(i);
 				}
 
 			}
@@ -197,13 +196,16 @@ public class GPUHandler implements IGPUHandler {
 		if (method.getBody().toString().length() == position) {
 			newBody = "{" + getGpuCode() + "}";
 		} else {
-			newBody = method.getBody().toString().substring(0, position)
-					+ getGpuCode()
-					+ method.getBody().toString().substring(position,
-							method.getBody().toString().length());
+			if (position < method.getBody().toString().length()
+					&& position >= 0)
+				newBody = method.getBody().toString().substring(0, position)
+						+ getGpuCode()
+						+ method.getBody().toString().substring(position,
+								method.getBody().toString().length());
 
 		}
-		System.out.println(method.getBody().toString().substring(0, position));
+		// System.out.println(method.getBody().toString().substring(0,
+		// position));
 	}
 
 	private void handleLoopDeclaration(ForStatement s) {
@@ -284,7 +286,8 @@ public class GPUHandler implements IGPUHandler {
 		System.out.println(HandleProjectParallelism.getSrcPath());
 		String cuFile = getCuDeclaration() + getCuFileBody();
 		try {
-			String path = HandleProjectParallelism.getSrcPath() + IPath.SEPARATOR + "simple.cu";
+			String path = HandleProjectParallelism.getSrcPath()
+					+ IPath.SEPARATOR + "simple.cu";
 			fout = new FileOutputStream(path);
 			System.out.println(path);
 			new PrintStream(fout).println(cuFile);
