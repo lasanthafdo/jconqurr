@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-//import org.eclipse.jconqurr.core.ast.visitors.AnnotationVisitor;
-import org.eclipse.jconqurr.analyzer.PipelineAnalyzer;
-import org.eclipse.jconqurr.core.ast.visitors.ExpressionStatementVisitor; //import org.eclipse.jconqurr.core.ast.visitors.LineCommentVisitor;
+import org.eclipse.jconqurr.core.ast.visitors.ExpressionStatementVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.MethodInvocationVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.MethodVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.TypeDeclarationVisitor;
@@ -28,7 +26,6 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 	private List<MethodDeclaration> annotatedTaskMethods = new ArrayList<MethodDeclaration>();
 	private List<MethodDeclaration> annotatedLoopMethods = new ArrayList<MethodDeclaration>();
 	private List<MethodDeclaration> listOfMethodsAndConstructors = new ArrayList<MethodDeclaration>();
-	private List<MethodDeclaration> notAnnotatedMethods = new ArrayList<MethodDeclaration>();
 	private List<HashMap<String, MethodDeclaration>> annotatedDivideAndConquer = new ArrayList<HashMap<String, MethodDeclaration>>();
 	private List<MethodDeclaration> annotatedGPUMethods = new ArrayList<MethodDeclaration>();
 	private List<MethodDeclaration> annotatedPipelineMethods = new ArrayList<MethodDeclaration>();
