@@ -43,27 +43,6 @@
       </menuContribution>
    </extension>
    <extension
-         point="org.eclipse.ui.popupMenus">
-      <objectContribution
-            adaptable="false"
-            id="org.eclipse.jconqurr.core.objectContribution1"
-            objectClass="org.eclipse.core.resources.IProject">
-         <menu
-               id="org.eclipse.jconqurr.core.menu1"
-               label="%menu.label.0">
-            <separator
-                  name="group1">
-            </separator>
-         </menu>
-         <action
-               class="org.eclipse.jconqurr.internal.ui.actions.ConvertParallelAction"
-               id="org.eclipse.jconqurr.core.buildAction"
-               label="%action.label"
-               menubarPath="org.eclipse.jconqurr.ui.menu1/group1">
-         </action>
-      </objectContribution>
-   </extension>
-   <extension
          id="org.eclipse.jconqurr.parallelnature"
          name="%extension.name"
          point="org.eclipse.core.resources.natures">
