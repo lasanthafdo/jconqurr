@@ -121,7 +121,6 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 									.trim().equals("Pipeline")) {
 								annotatedPipelineMethods.add(method);
 							}
-
 							else if (ab[i].getAnnotationType().getName().trim()
 									.startsWith("DivideAndConquer")) {
 								HashMap<String, MethodDeclaration> divideAndConquer = new HashMap<String, MethodDeclaration>();

@@ -125,7 +125,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 		}
 	}
 
-	public void addGpuLibraries(IJavaProject project) {
+	private void addGpuLibraries(IJavaProject project) {
 		try {
 			// get the current class path entries
 			IClasspathEntry[] classPaths = project.getResolvedClasspath(false);
