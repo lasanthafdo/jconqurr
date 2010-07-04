@@ -9,7 +9,7 @@ import org.eclipse.jconqurr.core.ast.visitors.ModifiedAssignmentVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.ModifiedSimpleNameVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.VariableDeclarationFragmentVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.WhileStatementVisitor;
-import org.eclipse.jconqurr.rewrite.PipelineRewriter;
+import org.eclipse.jconqurr.rewrite.PipelineMarkerRewriter;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Block;
@@ -51,7 +51,7 @@ public class PipelineAnalyzer extends JQAnalyzer {
 		pipelineMethod.accept(wsVisitor);
 		AST ast = this.rootAST;
 		ASTRewrite rewriter = ASTRewrite.create(ast);
-		PipelineRewriter pipeRewriter = new PipelineRewriter(this.unit);
+		PipelineMarkerRewriter pipeRewriter = new PipelineMarkerRewriter(this.unit);
 		pipeRewriter.setImportDeclarations(rewriter);
 		for (WhileStatement ws : wsVisitor.getWhileStatements()) {
 			pipeRewriter.markPipelineStart(rewriter, ws);

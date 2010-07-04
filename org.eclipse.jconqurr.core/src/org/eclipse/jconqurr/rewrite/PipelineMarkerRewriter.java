@@ -17,9 +17,9 @@ import org.eclipse.jdt.core.dom.WhileStatement;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 
-public class PipelineRewriter extends SimpleRewriter {
+public class PipelineMarkerRewriter extends SimpleRewriter {
 
-	public PipelineRewriter(CompilationUnit cu) {
+	public PipelineMarkerRewriter(CompilationUnit cu) {
 		super(cu);
 		// TODO Auto-generated constructor stub
 	}
