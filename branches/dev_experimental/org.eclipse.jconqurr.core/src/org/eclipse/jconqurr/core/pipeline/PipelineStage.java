@@ -238,25 +238,25 @@ public class PipelineStage {
 			String queueType = "";
 			if (this.stageNumber == numberOfStages) {
 				if (this.hasOutClass) {
-					this.queueFields += "static BlockingQueue<JqOut" + stageNumber
+					PipelineStage.queueFields += "static BlockingQueue<JqOut" + stageNumber
 							+ "> queueOut" + stageNumber
 							+ " = new LinkedBlockingQueue<JqOut" + stageNumber
 							+ ">();";
 				} else {
 					queueType = getQueueType(getVariableType(this.outArg[0]));
-					this.queueFields += "static BlockingQueue<" + queueType
+					PipelineStage.queueFields += "static BlockingQueue<" + queueType
 							+ "> queueOut" + stageNumber
 							+ " = new LinkedBlockingQueue<" + queueType + ">();";
 				}
 			} else {
 				if (this.hasOutClass) {
-					this.queueFields += "static BlockingQueue<JqOut" + stageNumber
+					PipelineStage.queueFields += "static BlockingQueue<JqOut" + stageNumber
 							+ "> queueOut" + stageNumber
 							+ " = new ArrayBlockingQueue<JqOut" + stageNumber
 							+ ">(10);";
 				} else {
 					queueType = getQueueType(getVariableType(this.outArg[0]));
-					this.queueFields += "static BlockingQueue<" + queueType
+					PipelineStage.queueFields += "static BlockingQueue<" + queueType
 							+ "> queueOut" + stageNumber
 							+ " = new ArrayBlockingQueue<" + queueType + ">(10);";
 				}

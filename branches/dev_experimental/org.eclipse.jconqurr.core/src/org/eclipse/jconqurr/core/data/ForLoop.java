@@ -1,24 +1,22 @@
 package org.eclipse.jconqurr.core.data;
 
-import org.eclipse.jconqurr.core.ast.visitors.ExpressionStatementVisitor;
-import org.eclipse.jconqurr.core.ast.visitors.MethodInvocationVisitor;
-import org.eclipse.jconqurr.core.ast.visitors.SimpleNameVisitor;
-import org.eclipse.jdt.core.dom.Block;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.eclipse.jconqurr.core.ast.visitors.ExpressionStatementVisitor;
+import org.eclipse.jconqurr.core.ast.visitors.MethodInvocationVisitor;
+import org.eclipse.jconqurr.core.ast.visitors.SimpleNameVisitor;
 import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
-import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 
@@ -71,10 +69,10 @@ public class ForLoop {
 		return threadClassFields;
 	}
 
+	@SuppressWarnings("unchecked")
 	public void init() {
 		if (this.parent != null) {
 			List<Statement> statements = parent.statements();
-			int parentPosition = parent.getStartPosition();
 			statementsBeforeForLoop = statements.subList(0, position - 1);
 			for (int i = 0; i < statementsBeforeForLoop.size(); i++) {
 
@@ -91,8 +89,6 @@ public class ForLoop {
 					variableDeclarationStatements
 							.add((VariableDeclarationStatement) statementsBeforeForLoop
 									.get(i));
-					// System.out.print("Variable declaration :");
-					// System.out.println(statementsBeforeForLoop.get(i));
 				}
 			}
 			statementsAfterForLoop = statements.subList(position + 1,
@@ -135,11 +131,11 @@ public class ForLoop {
 					}
 				}
 			}
-			// System.out.println(variables);
 		}
 		filterDependentVariables();
 	}
 
+	@SuppressWarnings("unchecked")
 	private void filterDependentVariables() {
 		for (VariableDeclarationStatement vdecl : variableDeclarationStatements) {
 			vdecl.fragments();
@@ -150,7 +146,6 @@ public class ForLoop {
 						.resolveBinding();
 
 				vbinding.getName();
-				ITypeBinding tbinding = vbinding.getType();
 				String variableName = vbinding.getName();
 				for (SimpleName name : variables) {
 					if (variableName.equals(name.toString())) {
@@ -247,6 +242,7 @@ public class ForLoop {
 		tasks.add(task2);
 	}
 
+	@SuppressWarnings("unchecked")
 	public String analyzeBody(Statement stmt) {
 		System.out.println("substring" + stmt.toString().substring(0, 10));
 		MethodInvocationVisitor visitor = new MethodInvocationVisitor();

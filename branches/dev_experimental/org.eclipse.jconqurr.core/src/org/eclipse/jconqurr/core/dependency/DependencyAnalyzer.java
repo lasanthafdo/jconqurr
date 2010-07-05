@@ -27,13 +27,13 @@ public class DependencyAnalyzer implements IDependencyAnalyzer {
 		List<Block> blocks = blockVisitor.getBlocks();
 		List<Statement> statementList = new ArrayList<Statement>();
 		for (Block b : blocks) {
-			List stmts = b.statements();
+			List<?> stmts = b.statements();
 			for (int i = 0; i < stmts.size(); i++) {
 				if(((Statement) stmts.get(i)).getNodeType()==Statement.FOR_STATEMENT){
 					ForStatement s=(ForStatement)((Statement) stmts.get(i));
 					ForLoopVisitor forStatmentVisitor=new ForLoopVisitor();
 					s.getBody().accept(forStatmentVisitor);
-					List<ForStatement> inerForStatements=forStatmentVisitor.getForLoops();
+					//List<ForStatement> innerForStatements=forStatmentVisitor.getForLoops();
 				}
 				statementList.add((Statement) stmts.get(i));
 			}
@@ -53,7 +53,7 @@ public class DependencyAnalyzer implements IDependencyAnalyzer {
 		for (MethodDeclaration m : key) {
 			List<Statement> statementList = statements.get(m);
 			for (Statement s : statementList) {
-				//System.out.println(s.toString());
+				System.out.println(s.toString());
 			}
 		}
 	}

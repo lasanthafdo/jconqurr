@@ -3,15 +3,11 @@ package org.eclipse.jconqurr.core.task;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.jconqurr.core.ast.visitors.LineCommentVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.SimpleNameVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.VariableDeclarationVisitor;
-import org.eclipse.jdt.core.dom.IExtendedModifier;
 import org.eclipse.jdt.core.dom.IMethodBinding;
-import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
-import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
@@ -19,12 +15,10 @@ import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 
 public class TaskMethod implements ITaskMethod {
 	private MethodDeclaration method;
-	private List<String> tasks = new ArrayList();
-	private List<Statement> statmentsBeforeTasks = new ArrayList();
-	private String returnType;
-	private String modifier;
+	private List<String> tasks = new ArrayList<String>();
+	private List<Statement> statmentsBeforeTasks = new ArrayList<Statement>();
 	private String shedulerMethod;
-	private List<String> codeAfterBarrier = new ArrayList();
+	private List<String> codeAfterBarrier = new ArrayList<String>();
 	private static int barrierCounter = 1;
 	private static int taskCounter = 1;
 	private static int taskNo = 1;
@@ -89,8 +83,9 @@ public class TaskMethod implements ITaskMethod {
 				+ barrierCode;
 	}
 
+	@SuppressWarnings("unchecked")
 	public List<String> getTasks() {
-		int directiveStart = -1;
+		//int directiveStart = -1;
 		List<Statement> stmts = method.getBody().statements();
 		VariableDeclarationVisitor variableDeclarationVisitor = new VariableDeclarationVisitor();
 		method.accept(variableDeclarationVisitor);
@@ -103,7 +98,7 @@ public class TaskMethod implements ITaskMethod {
 				variableDeclarationStatements.add((VariableDeclarationStatement)s);
 			}
 			if (s.toString().startsWith("Directives.startTask();")) {
-				directiveStart = stmts.indexOf(s);
+				//directiveStart = stmts.indexOf(s);
 				taskStartPositions.add(stmts.indexOf(s));
 			}
 			if (s.toString().startsWith("Directives.endTask();")) {
@@ -214,12 +209,7 @@ public class TaskMethod implements ITaskMethod {
 	}
 
 	public void init() {
-		 
 		IMethodBinding binding = method.resolveBinding();
-
-		ITypeBinding[] parameterBinding = binding.getMethodDeclaration()
-				.getParameterTypes();
-
 		if (method.parameters().size() > 0) {
 			String arguments = "";
 			for (int i = 0; i < method.parameters().size(); i++) {
@@ -241,6 +231,7 @@ public class TaskMethod implements ITaskMethod {
 		getTasks();
 	}
 
+	@SuppressWarnings("unchecked")
 	private void filterDependentVariables() {
 		for (VariableDeclarationStatement vdecl : variableDeclarationStatements) {
 			vdecl.fragments();
@@ -251,7 +242,6 @@ public class TaskMethod implements ITaskMethod {
 						.resolveBinding();
 
 				vbinding.getName();
-				ITypeBinding tbinding = vbinding.getType();
 				String variableName = vbinding.getName();
 				for (SimpleName name : variables) {
 					if (variableName.equals(name.toString())) {

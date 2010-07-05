@@ -2,8 +2,9 @@ package org.eclipse.jconqurr.core.pipeline;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import org.eclipse.jconqurr.core.ast.visitors.MethodInvocationVisitor;
-import org.eclipse.jconqurr.core.ast.visitors.SimpleNameVisitor; //import org.eclipse.jconqurr.core.ast.visitors.StatementVisitor;
+import org.eclipse.jconqurr.core.ast.visitors.SimpleNameVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.VariableDeclarationVisitor;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Block;
@@ -18,24 +19,13 @@ import org.eclipse.jdt.core.dom.WhileStatement;
 
 public class PipelineHandler implements IPipelineHandler {
 	private MethodDeclaration method;
-	// private String pipelineInput = "";
 	private List<VariableDeclarationStatement> variableDeclarationStatements = new ArrayList<VariableDeclarationStatement>();
 	private String pipelineOutPut = "";
 	private List<SimpleName> variables = new ArrayList<SimpleName>();
-	// private List<VariableDeclarationStatement>
-	// runMethodVariableDeclarationStatements = new
-	// ArrayList<VariableDeclarationStatement>();
-	// private List<VariableDeclarationStatement> threadClassFields = new
-	// ArrayList<VariableDeclarationStatement>();
 	private String pipelineMethod = "";
 	private List<Statement> statementBeforePipeline = new ArrayList<Statement>();
 	private String stmtBeforePipeline = "";
-	// private String[] mainInput = { "" };
 	private String expressionOfWhileStatement = "";
-	// private String inputThread = "";
-	// private List<String> threadInputFields = new ArrayList<String>();
-	// private List<String> queFields = new ArrayList<String>();
-	// private List<String> barrierFields = new ArrayList<String>();
 	private List<PipelineStage> pipelineStages = new ArrayList<PipelineStage>();
 	private String className = "";
 
@@ -123,6 +113,7 @@ public class PipelineHandler implements IPipelineHandler {
 				+ barrierInvokation + stmtAfterPipeline + "}";
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void init() {
 		VariableDeclarationVisitor vVisitor = new VariableDeclarationVisitor();
@@ -216,22 +207,12 @@ public class PipelineHandler implements IPipelineHandler {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	private List<ASTNode> getNextStatement(ASTNode node) {
-		// List<Statement> stmts = new ArrayList<Statement>();
-		// StatementVisitor stmtVisitor = new StatementVisitor();
-		// node.getParent().getParent().accept(stmtVisitor);
-		// for(Statement stmt:stmtVisitor.getStatements()){
-		// stmts.add(stmt);
-		// if(stmt.toString().trim().startsWith("Directives.pipelineStage"))
-		// break;
-		// }
-
 		ASTNode parent = node.getParent().getParent();
 		List<ASTNode> nextStatement = new ArrayList<ASTNode>();
-		ASTNode blockParent;
 		if (parent instanceof Block) {
 			Block block = (Block) parent;
-			blockParent = block.getParent();
 			List<Statement> statements = block.statements();
 			for (int i = 0; i < statements.size(); i++) {
 				if (statements.get(i).getStartPosition() == node
@@ -245,22 +226,12 @@ public class PipelineHandler implements IPipelineHandler {
 
 	}
 
+	@SuppressWarnings("unchecked")
 	private List<Statement> getNextStageStatement(ASTNode node) {
-		// List<Statement> stmts = new ArrayList<Statement>();
-		// StatementVisitor stmtVisitor = new StatementVisitor();
-		// node.getParent().getParent().accept(stmtVisitor);
-		// for(Statement stmt:stmtVisitor.getStatements()){
-		// stmts.add(stmt);
-		// if(stmt.toString().trim().startsWith("Directives.pipelineStage"))
-		// break;
-		// }
-
 		ASTNode parent = node.getParent().getParent();
 		List<Statement> nextStatement = new ArrayList<Statement>();
-		ASTNode blockParent;
 		if (parent instanceof Block) {
 			Block block = (Block) parent;
-			blockParent = block.getParent();
 			List<Statement> statements = block.statements();
 			for (int i = 0; i < statements.size(); i++) {
 				if (statements.get(i).getStartPosition() == node
@@ -277,7 +248,6 @@ public class PipelineHandler implements IPipelineHandler {
 			}
 		}
 		return nextStatement;
-
 	}
 
 	@Override
