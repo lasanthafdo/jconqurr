@@ -1,0 +1,23 @@
+#summary Discusses the overview of the JConqurr plug-in
+#labels Featured
+
+= Introduction =
+
+JConqurr is a tool kit for Java that enables the developer to automatically convert their code to multi-threaded code. The first stage of the project comprises of developing a framework based on marker-annotations and directives that will convert the specified code segment suitable for parallel processing. In this stage, the tool kit would rely on the developer to place the markers correctly.
+In the second stage, the tool kit would attempt to automatically identify parallel convertible code segments and insert the markers automatically.
+
+= Details =
+
+JConqurr is developed as a plug-in project for Eclipse IDE and is licensed under Eclipse Public License v1.0 . Currently the plug-in supports following parallel techniques.
+
+== Parallel execution for Loops ==
+
+== Pipeline Pattern ==
+
+== Split-join pattern ==
+
+== Divide and Conquer ==
+
+== Parallel execution for Tasks ==
+
+== nVidia GPU utilization for parallel processing ==
