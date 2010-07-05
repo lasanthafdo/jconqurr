@@ -1,6 +1,7 @@
 package org.eclipse.jconqurr.core;
 
 import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.JavaModelException;
 
 public interface IProjectHandler {
 	/**
@@ -25,14 +26,17 @@ public interface IProjectHandler {
 	 * Please note that {@link IProjectHandler#setSourceProject(IJavaProject)}
 	 * must be called before calling this method.
 	 * {@link IProjectHandler#getParallelProject()} can be called to get a
-	 * reference to the created paralell project.
+	 * reference to the created parallel project.
 	 * <p>
 	 * Throws a null pointer exception if the source project has not been set or
 	 * is null.
 	 * 
 	 * @throws NullPointerException
+	 * 		if source project is not set or has been set to null
+	 * @throws JavaModelException
+	 * 		if the java model is inconsistent for the source project
 	 */
-	public void convertToParallel() throws NullPointerException;
+	public void convertToParallel() throws NullPointerException, JavaModelException;
 
 	/**
 	 * Returns the already created parallel project if the successful is

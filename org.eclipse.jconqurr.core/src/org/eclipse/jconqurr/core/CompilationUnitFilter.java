@@ -67,7 +67,6 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 	 */
 	@Override
 	public List<TypeDeclaration> getOtherInnerClasses() {
-		// TODO Auto-generated method stub
 		return otherInnerclasses;
 	}
 
@@ -76,9 +75,7 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 	 */
 	@Override
 	public void setCompilationUnit(CompilationUnit cu) {
-		// TODO Auto-generated method stub
 		compilationUnit = cu;
-
 	}
 
 	/**
@@ -194,13 +191,7 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 
 	@Override
 	public List<MethodDeclaration> getPipelineMethods() {
-		// This code segment is for test purposes only. Remove for production
-/*		PipelineAnalyzer pa = new PipelineAnalyzer(compilationUnit);
-		if(!annotatedPipelineMethods.isEmpty()) {
-			pa.setPipelineMethod(annotatedPipelineMethods.get(0));
-			pa.insertDirectives();
-		}
-*/		return annotatedPipelineMethods;
+		return annotatedPipelineMethods;
 	}
 
 }

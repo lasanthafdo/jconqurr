@@ -37,6 +37,7 @@ public class ForLoopHandler implements IForLoopHandler {
 	/**
 	 * @see IForLoopHandler#setTasks()
 	 */
+	@SuppressWarnings("unchecked")
 	public void setTasks() {
 		ForLoopVisitor loopVisitor = new ForLoopVisitor();
 		method.accept(loopVisitor);
@@ -88,9 +89,6 @@ public class ForLoopHandler implements IForLoopHandler {
 			}
 		}
 		IMethodBinding binding = method.resolveBinding();
-		ITypeBinding[] parameterBinding = binding.getMethodDeclaration()
-				.getParameterTypes();
-		 
 		if (method.parameters().size() > 0) {
 			String arguments = "";
 			for (int i = 0; i < method.parameters().size(); i++) {
@@ -149,6 +147,7 @@ public class ForLoopHandler implements IForLoopHandler {
 	 * @param tasks
 	 * @return String
 	 */
+	@SuppressWarnings("unchecked")
 	private String sheduleTasks() {
 		String methodDeclaration = "\n" + shedulerMethod + "{";
 		String methodBody = "";

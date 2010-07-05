@@ -54,9 +54,18 @@ public interface ICompilationUnitFilter {
 	 */
 	public List<MethodDeclaration> getAnnotatedGPUMethods();
 
+	/**
+	 * Returns the methods which have been annotated with pipeline annotations.
+	 * @return
+	 * 		the method declarations as a list for methods annotated with {@code @Pipeline} annotation
+	 */
 	public List<MethodDeclaration> getPipelineMethods();
 
+	/**
+	 * Returns the inner classes that already exist inside the compilation unit.
+	 * @return
+	 * 		a list of type declarations which correspond to the inner classes
+	 * 		for this compilation unit
+	 */
 	public List<TypeDeclaration> getOtherInnerClasses();
-
-	//public void removeUnwantedStuff();
 }

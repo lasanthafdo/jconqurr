@@ -48,12 +48,6 @@ public class GPUHandler implements IGPUHandler {
 	private String modifier;
 	private String newBody;
 
-	private String getCubinFileDeclaration() {
-		String cubinDeclaraion = "String cubinFileName = prepareCubinFile(\""
-				+ cubinFileName + "\");";
-		return cubinDeclaraion;
-	}
-
 	@Override
 	public void process() {
 		System.out.println("Called the process.......................");
