@@ -8,7 +8,7 @@ public interface ITaskMethod {
 
 	public String getModifiedMethod();
 
-	public List<String> getTasks();
+	public void filterTasks();
 
 	public void setMethod(MethodDeclaration method);
 
