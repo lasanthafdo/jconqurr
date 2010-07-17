@@ -35,13 +35,15 @@ public class ForLoop {
 	private List<SimpleName> simpleNamesOutsideLoop = new ArrayList<SimpleName>();
 	private List<ASTNode> parentsOfParents = new ArrayList<ASTNode>();
 	private List<VariableDeclarationStatement> variableDeclarationStatements = new ArrayList<VariableDeclarationStatement>();
-	private List<SimpleName> variables=new ArrayList<SimpleName>();
+	private List<SimpleName> variables = new ArrayList<SimpleName>();
 	private List<VariableDeclarationStatement> runMethodVariableDeclarationStatements = new ArrayList<VariableDeclarationStatement>();
 	private List<VariableDeclarationStatement> threadClassFields = new ArrayList<VariableDeclarationStatement>();
-	public static int lockNo=1;
-	public List<SimpleName> getVariables(){
+	public static int lockNo = 1;
+
+	public List<SimpleName> getVariables() {
 		return variables;
 	}
+
 	public List<Statement> getStatementBeforForLoop() {
 		return statementsBeforeForLoop;
 	}
@@ -67,9 +69,10 @@ public class ForLoop {
 		return tasks;
 	}
 
-	public List<VariableDeclarationStatement> getThreadClassFields(){
+	public List<VariableDeclarationStatement> getThreadClassFields() {
 		return threadClassFields;
 	}
+
 	public void init() {
 		if (this.parent != null) {
 			List<Statement> statements = parent.statements();
@@ -87,7 +90,9 @@ public class ForLoop {
 			}
 			for (int i = 0; i < statementsBeforeForLoop.size(); i++) {
 				if (statementsBeforeForLoop.get(i) instanceof VariableDeclarationStatement) {
-					variableDeclarationStatements.add((VariableDeclarationStatement) statementsBeforeForLoop.get(i));
+					variableDeclarationStatements
+							.add((VariableDeclarationStatement) statementsBeforeForLoop
+									.get(i));
 				}
 			}
 			statementsAfterForLoop = statements.subList(position + 1,
@@ -115,18 +120,17 @@ public class ForLoop {
 			}
 			SimpleNameVisitor nameVisitor = new SimpleNameVisitor();
 			forLoop.accept(nameVisitor);
-			for(SimpleName name:nameVisitor.getVariables()){
-				if(variables.size()==0){
+			for (SimpleName name : nameVisitor.getVariables()) {
+				if (variables.size() == 0) {
 					variables.add(name);
-				}
-				else{
-					boolean contains=false;
-					for(SimpleName d:variables){
-						if(d.toString().equals(name.toString())){
-							contains=true;
+				} else {
+					boolean contains = false;
+					for (SimpleName d : variables) {
+						if (d.toString().equals(name.toString())) {
+							contains = true;
 						}
 					}
-					if(!contains){
+					if (!contains) {
 						variables.add(name);
 					}
 				}
@@ -135,7 +139,7 @@ public class ForLoop {
 		filterDependentVariables();
 	}
 
-	private void filterDependentVariables(){
+	private void filterDependentVariables() {
 		for (VariableDeclarationStatement vdecl : variableDeclarationStatements) {
 			vdecl.fragments();
 
@@ -148,13 +152,14 @@ public class ForLoop {
 				String variableName = vbinding.getName();
 				for (SimpleName name : variables) {
 					if (variableName.equals(name.toString())) {
-						System.out.println("equals");
-							threadClassFields.add(vdecl);
+						 
+						threadClassFields.add(vdecl);
 					}
 				}
 			}
 		}
 	}
+
 	private void setVariableDeclarationsBeforeLoop(List<Statement> statements) {
 		for (Statement stmt : statements) {
 			if (stmt instanceof VariableDeclarationStatement) {
@@ -178,13 +183,14 @@ public class ForLoop {
 			return false;
 		}
 	}
-	 
+
 	public void addTasks() {
 		int start = 0;
-		int start1 = 0;
+		//int start1 = 0;
 		int start2 = 0;
 		int end1 = 0;
 		int end2 = 0;
+		String start1="";
 		String lefthandSideAssign = "";
 		String conditionOprator = "";
 		String conditon1 = "";
@@ -194,19 +200,22 @@ public class ForLoop {
 		ExpressionStatementVisitor expressionStatementVisitor = new ExpressionStatementVisitor();
 		forLoop.getExpression().accept(expressionStatementVisitor);
 		conditionOprator = expressionStatementVisitor.getOprator();
-		
+
 		body = forLoop.getBody().toString();
-		body=analyzeBody(forLoop.getBody());
+		body = analyzeBody(forLoop.getBody());
 		updater = forLoop.updaters().get(0).toString();
 		String initializers[] = forLoop.initializers().get(0).toString().split(
 				"=");
-		for (int k = 0; k < initializers.length; k++) {
+		lefthandSideAssign=initializers[0];
+		start1=initializers[1];
+		/*for (int k = 0; k < initializers.length; k++) {
 			if (isParsableToInt(initializers[k].trim())) {
 				start = Integer.parseInt(initializers[k].trim());
 				break;
 			} else
 				lefthandSideAssign = initializers[k];
-		}
+		}*/
+		
 		String condition = "";
 		String strExpression = forLoop.getExpression().toString();
 		String regex = "[<>[<=][>=]]";
@@ -222,91 +231,115 @@ public class ForLoop {
 			}
 		}
 		int newCondition1 = (int) conditionInt / 2;
-		start1 = start;
+		//start1 = start;
 		end1 = newCondition1;
 		start2 = end1;
 		end2 = conditionInt;
+
 		conditon1 = condition + conditionOprator + end1;
 		conditon2 = condition + conditionOprator + end2;
 		InfixExpression exp = (InfixExpression) forLoop.getExpression();
-		String task1 = "for(" + lefthandSideAssign + "=" + start1 + ";"
-				+ exp.getLeftOperand() + exp.getOperator()
-				+ exp.getRightOperand() + "/2" + ";" + updater + ")" + body;
-		String task2 = "for(" + lefthandSideAssign + "="
-				+ exp.getRightOperand() + "/2" + ";" + exp.getLeftOperand()
-				+ exp.getOperator() + exp.getRightOperand() + ";" + updater
-				+ ")" + body;
-		tasks.add(task1);
-		tasks.add(task2);
+		// System.out.println(exp.getOperator());
+		String s1 = "--";
+		String s2 = "++";
+		s1.subSequence(0, s1.length());
+		if (updater.contains(s2.subSequence(0, s2.length()))) {
+
+			String task1 = "for(" + lefthandSideAssign + "=" + start1 + ";"
+					+ exp.getLeftOperand() + exp.getOperator()
+					+ exp.getRightOperand() + "/2" + ";" + updater + ")" + body;
+			String task2 = "for(" + lefthandSideAssign + "="
+					+ exp.getRightOperand() + "/2" + ";" + exp.getLeftOperand()
+					+ exp.getOperator() + exp.getRightOperand() + ";" + updater
+					+ ")" + body;
+			tasks.add(task1);
+			tasks.add(task2);
+		}
+		if (updater.contains(s1.subSequence(0, s1.length()))) {
+			String task1 = "for(" + lefthandSideAssign + "=" + start1 + ";"
+					+ exp.getLeftOperand() + exp.getOperator() + start1 + "/2"
+					+ ";" + updater + ")" + body;
+			String task2 = "for(" + lefthandSideAssign + "=" + start1 + "/2"
+					+ ";" + exp.getLeftOperand() + exp.getOperator()
+					+ exp.getRightOperand() + ";" + updater + ")" + body;
+			tasks.add(task1);
+			tasks.add(task2);
+		}
 	}
-	
-	public String analyzeBody(Statement stmt){
-		System.out.println("substring"+stmt.toString().substring(0, 10));
-		MethodInvocationVisitor visitor= new MethodInvocationVisitor();
+
+	public String analyzeBody(Statement stmt) {
+		// System.out.println("substring"+stmt.toString().substring(0, 10));
+		MethodInvocationVisitor visitor = new MethodInvocationVisitor();
 		stmt.accept(visitor);
 		visitor.getMethods();
-		List<Statement> syncStatments=new ArrayList<Statement>();
-		List<Statement>beforeSync=new ArrayList<Statement>();
-		List<Statement>afterSync=new ArrayList<Statement>();
-		List<String>forDecl=new ArrayList<String>();
-		String body="";
-		for(MethodInvocation m:visitor.getMethods()){
-			if(m.toString().startsWith("Directives.shared")){
-				System.out.println("shared detected");
-				System.out.print(m.getParent());
-				ASTNode node=m.getParent();
-				
-				while(!(node instanceof Block)){
-					node=node.getParent();
+		List<Statement> syncStatments = new ArrayList<Statement>();
+		List<Statement> beforeSync = new ArrayList<Statement>();
+		List<Statement> afterSync = new ArrayList<Statement>();
+		List<String> forDecl = new ArrayList<String>();
+		String body = "";
+		for (MethodInvocation m : visitor.getMethods()) {
+			if (m.toString().startsWith("Directives.shared")) {
+				// System.out.println("shared detected");
+				// System.out.print(m.getParent());
+				ASTNode node = m.getParent();
+
+				while (!(node instanceof Block)) {
+					node = node.getParent();
 				}
-				ASTNode parent=m.getParent();
-				while(!(stmt.toString().equals(parent.toString()))){
-					parent=parent.getParent();
-					if(parent instanceof ForStatement){
-						String initializer="";
-						String expression="";
-						String updater="";
-						String forStatement="";
-						initializer=((ForStatement)parent).initializers().get(0).toString();
-						expression=((ForStatement)parent).getExpression().toString();
-						updater=((ForStatement)parent).updaters().get(0).toString();
-						forStatement="for("+initializer+";"+expression+";"+updater+")";
+				ASTNode parent = m.getParent();
+				while (!(stmt.toString().equals(parent.toString()))) {
+					parent = parent.getParent();
+					if (parent instanceof ForStatement) {
+						String initializer = "";
+						String expression = "";
+						String updater = "";
+						String forStatement = "";
+						initializer = ((ForStatement) parent).initializers()
+								.get(0).toString();
+						expression = ((ForStatement) parent).getExpression()
+								.toString();
+						updater = ((ForStatement) parent).updaters().get(0)
+								.toString();
+						forStatement = "for(" + initializer + ";" + expression
+								+ ";" + updater + ")";
 						forDecl.add(forStatement);
-						body+=forStatement;
+						body += forStatement;
 					}
 				}
-				if(node instanceof Block){
-					int position=0;
-					String blockbody="";
-					String sharedstmt="";
-					List<Statement> stmts=((Block)node).statements();
-					for(int i=0;i<stmts.size();i++){
-						if(stmts.get(i).toString().startsWith("Directives.shared")){
-							position=i;
-							syncStatments.add(stmts.get(i+1));
+				if (node instanceof Block) {
+					int position = 0;
+					String blockbody = "";
+					String sharedstmt = "";
+					List<Statement> stmts = ((Block) node).statements();
+					for (int i = 0; i < stmts.size(); i++) {
+						if (stmts.get(i).toString().startsWith(
+								"Directives.shared")) {
+							position = i;
+							syncStatments.add(stmts.get(i + 1));
 						}
 					}
-					beforeSync=stmts.subList(0, position);
-					if((position+2)!=stmts.size()){
-					afterSync=stmts.subList(position+2, stmts.size());
+					beforeSync = stmts.subList(0, position);
+					if ((position + 2) != stmts.size()) {
+						afterSync = stmts.subList(position + 2, stmts.size());
 					}
-					for(Statement t:syncStatments){
-						sharedstmt+=t.toString();
+					for (Statement t : syncStatments) {
+						sharedstmt += t.toString();
 					}
-					sharedstmt="synchronized("+"lock"+lockNo+")"+"{"+sharedstmt+"}";
+					sharedstmt = "synchronized(" + "lock" + lockNo + ")" + "{"
+							+ sharedstmt + "}";
 					lockNo++;
-					for(Statement t:beforeSync){
-						System.out.println("-->"+t);
-						blockbody+=t;
+					for (Statement t : beforeSync) {
+						// System.out.println("-->"+t);
+						blockbody += t;
 					}
-					blockbody=blockbody+sharedstmt;
-					for(Statement t:afterSync){
-						System.out.println("-->"+t);
-						blockbody+=t;
+					blockbody = blockbody + sharedstmt;
+					for (Statement t : afterSync) {
+						// System.out.println("-->"+t);
+						blockbody += t;
 					}
-					
-					body=body+"{"+blockbody+"}";
-					System.out.println(body);
+
+					body = body + "{" + blockbody + "}";
+					// System.out.println(body);
 					return body;
 				}
 			}
