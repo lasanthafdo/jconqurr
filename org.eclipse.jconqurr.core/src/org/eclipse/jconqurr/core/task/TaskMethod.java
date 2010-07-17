@@ -3,15 +3,12 @@ package org.eclipse.jconqurr.core.task;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.jconqurr.core.ast.visitors.LineCommentVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.SimpleNameVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.VariableDeclarationVisitor;
-import org.eclipse.jdt.core.dom.IExtendedModifier;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
-import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
@@ -21,6 +18,7 @@ public class TaskMethod implements ITaskMethod {
 	private MethodDeclaration method;
 	private List<String> tasks = new ArrayList();
 	private List<Statement> statmentsBeforeTasks = new ArrayList();
+	private List<Statement> statmentsAfterTasks = new ArrayList<Statement>();
 	private String returnType;
 	private String modifier;
 	private String shedulerMethod;
@@ -31,6 +29,84 @@ public class TaskMethod implements ITaskMethod {
 	private List<VariableDeclarationStatement> variableDeclarationStatements = new ArrayList<VariableDeclarationStatement>();
 	private List<VariableDeclarationStatement> threadClassFields = new ArrayList<VariableDeclarationStatement>();
 	private List<SimpleName> variables = new ArrayList<SimpleName>();
+	private List<Task> taskList = new ArrayList<Task>();
+
+	public void init() {
+
+		IMethodBinding binding = method.resolveBinding();
+
+		ITypeBinding[] parameterBinding = binding.getMethodDeclaration()
+				.getParameterTypes();
+
+		if (method.parameters().size() > 0) {
+			String arguments = "";
+			for (int i = 0; i < method.parameters().size(); i++) {
+				String d = method.parameters().get(i).toString();
+				if (i == (method.parameters().size() - 1)) {
+					arguments += d;
+				} else {
+					arguments += d + ",";
+				}
+			}
+			String m = binding.getMethodDeclaration().toString().substring(0,
+					binding.getMethodDeclaration().toString().indexOf("("));
+
+			shedulerMethod = m + "(" + arguments + ")";
+		} else {
+			shedulerMethod = binding.getMethodDeclaration().toString();
+		}
+
+		filterTasks();
+	}
+
+	private String getFutures() {
+		String stmBefore = "";
+		for (Statement stm : statmentsBeforeTasks) {
+			stmBefore += stm.toString() + "\n";
+		}
+		String stmAfter = "";
+		for (Statement stm : statmentsAfterTasks) {
+			stmAfter += stm.toString() + "\n";
+		}
+
+		String futureSubmit = "";
+		String futureGet = "";
+		int i = 0;
+		for (Task t : taskList) {
+
+			futureSubmit = futureSubmit + "future[" + i + "]=exec.submit("
+					+ t.getObject() + ");" + "\n";
+			++i;
+		}
+		if (codeAfterBarrier.size() == 0) {
+			futureGet = "for(int i=0;i<" + taskList.size() + ";i++){" + "\n"
+					+ "future[i].get();" + "\n" + "}" + stmAfter + "}" + "\n"
+					+ "catch (Exception e) {e.printStackTrace();}";
+		} else {
+			futureGet = "for(int i=0;i<" + taskList.size() + ";i++){" + "\n"
+					+ "future[i].get();" + "\n" + "}" + "}" + "\n"
+					+ "catch (Exception e) {e.printStackTrace();}";
+		}
+
+		// String futures = "";
+		String cyclicBarrier = "";
+		if (codeAfterBarrier.size() != 0) {
+			cyclicBarrier = "CyclicBarrier barrier = new CyclicBarrier("
+					+ taskList.size() + "," + "new barrier" + "()" + ");";
+		}
+		/*
+		 * if (codeAfterBarrier.size() != 0) { for (int j = 0; j <
+		 * taskList.size(); j++) { futureSubmit = futureSubmit + "future[" + j +
+		 * "]=exec.submit(new" + " task" + taskNo + "(barrier));" + "\n";
+		 * taskNo++; } }
+		 */
+		String sheduleTasksMethod = "\n" + shedulerMethod + "{" + "try{"
+				+ stmBefore + "\n" + cyclicBarrier + "\n"
+				+ "Future<?>[] future = (Future<?>[]) new Future["
+				+ taskList.size() + "];" + futureSubmit + futureGet + "\n"
+				+ "}";
+		return sheduleTasksMethod;
+	}
 
 	private String sheduleTasks(List<String> tasks,
 			List<String> codeAfterBarrier) {
@@ -74,22 +150,30 @@ public class TaskMethod implements ITaskMethod {
 	public String getModifiedMethod() {
 		String taskCode = "";
 		String barrierCode = "";
-		for (String s : tasks) {
-			taskCode = taskCode + taskRunnerCode("task" + taskCounter, s);
-			taskCounter++;
+		String barrierBody = "";
+		for (Task t : taskList) {
+			taskCode += t.getThreadClass() + "\n";
 		}
+
 		if (codeAfterBarrier.size() != 0) {
 			for (String s : codeAfterBarrier) {
-				barrierCode = barrierCode
-						+ codeAfterBarrier("barrier" + taskCounter, s);
-				barrierCounter++;
+				barrierBody += s;
+
 			}
 		}
-		return sheduleTasks(tasks, codeAfterBarrier) + "\n" + taskCode
-				+ barrierCode;
+		barrierCode = codeAfterBarrier("barrier", barrierBody);
+		return getFutures() + taskCode+barrierCode;
+		/*
+		 * for (String s : tasks) { taskCode = taskCode + taskRunnerCode("task"
+		 * + taskCounter, s); taskCounter++; } if (codeAfterBarrier.size() != 0)
+		 * { for (String s : codeAfterBarrier) { barrierCode = barrierCode +
+		 * codeAfterBarrier("barrier" + taskCounter, s); barrierCounter++; } }
+		 * return sheduleTasks(tasks, codeAfterBarrier) + "\n" + taskCode +
+		 * barrierCode;
+		 */
 	}
 
-	public List<String> getTasks() {
+	public void filterTasks() {
 		int directiveStart = -1;
 		List<Statement> stmts = method.getBody().statements();
 		VariableDeclarationVisitor variableDeclarationVisitor = new VariableDeclarationVisitor();
@@ -99,10 +183,11 @@ public class TaskMethod implements ITaskMethod {
 		List<Integer> taskEndPositions = new ArrayList<Integer>();
 		List<Integer> barrierPositions = new ArrayList<Integer>();
 		for (Statement s : stmts) {
-			if (s instanceof VariableDeclarationStatement) {
-				variableDeclarationStatements
-						.add((VariableDeclarationStatement) s);
-			}
+			/*
+			 * if (s instanceof VariableDeclarationStatement) {
+			 * variableDeclarationStatements .add((VariableDeclarationStatement)
+			 * s); }
+			 */
 			if (s.toString().startsWith("Directives.startTask();")) {
 				directiveStart = stmts.indexOf(s);
 				taskStartPositions.add(stmts.indexOf(s));
@@ -117,7 +202,23 @@ public class TaskMethod implements ITaskMethod {
 		if (taskStartPositions.size() > 0) {
 			List<Statement> subStatmentBeforeTask = stmts.subList(0,
 					(taskStartPositions.get(0)));
+			/*
+			 * System.out.println(taskEndPositions .get(taskEndPositions.size()
+			 * - 1));
+			 */
+			statmentsAfterTasks = stmts.subList(taskEndPositions
+					.get(taskEndPositions.size() - 1) + 1, (stmts.size()));
+
+			if (statmentsAfterTasks.size() > 0) {
+				for (Statement stm : statmentsAfterTasks) {
+					// System.out.println(stm.toString());
+				}
+			}
 			for (Statement stm : subStatmentBeforeTask) {
+				if (stm instanceof VariableDeclarationStatement) {
+					variableDeclarationStatements
+							.add((VariableDeclarationStatement) stm);
+				}
 				statmentsBeforeTasks.add(stm);
 			}
 			for (int m = 0; m < taskStartPositions.size(); m++) {
@@ -126,6 +227,7 @@ public class TaskMethod implements ITaskMethod {
 				List<Statement> otherStatement;
 				subStatement = stmts.subList((taskStartPositions.get(m) + 1),
 						(taskEndPositions.get(m)));
+
 				if (m + 1 < taskStartPositions.size()) {
 					otherStatement = stmts.subList(taskEndPositions.get(m) + 1,
 							taskStartPositions.get(m + 1));
@@ -156,6 +258,12 @@ public class TaskMethod implements ITaskMethod {
 						}
 					}
 					tasks.add(task);
+					boolean barrierExists = false;
+					if (barrierPositions.size() > 0) {
+						barrierExists = true;
+					}
+					taskList.add(new Task(method, subStatement,
+							statmentsBeforeTasks, barrierExists, (m + 1)));
 				}
 			}
 
@@ -170,7 +278,6 @@ public class TaskMethod implements ITaskMethod {
 			}
 		}
 		filterDependentVariables();
-		return null;
 	}
 
 	public void setMethod(MethodDeclaration method) {
@@ -206,34 +313,6 @@ public class TaskMethod implements ITaskMethod {
 		return barrierRunnerCode;
 	}
 
-	public void init() {
-
-		IMethodBinding binding = method.resolveBinding();
-
-		ITypeBinding[] parameterBinding = binding.getMethodDeclaration()
-				.getParameterTypes();
-
-		if (method.parameters().size() > 0) {
-			String arguments = "";
-			for (int i = 0; i < method.parameters().size(); i++) {
-				String d = method.parameters().get(i).toString();
-				if (i == (method.parameters().size() - 1)) {
-					arguments += d;
-				} else {
-					arguments += d + ",";
-				}
-			}
-			String m = binding.getMethodDeclaration().toString().substring(0,
-					binding.getMethodDeclaration().toString().indexOf("("));
-
-			shedulerMethod = m + "(" + arguments + ")";
-		} else {
-			shedulerMethod = binding.getMethodDeclaration().toString();
-		}
-
-		getTasks();
-	}
-
 	private void filterDependentVariables() {
 		for (VariableDeclarationStatement vdecl : variableDeclarationStatements) {
 			vdecl.fragments();
@@ -246,7 +325,7 @@ public class TaskMethod implements ITaskMethod {
 				String variableName = vbinding.getName();
 				for (SimpleName name : variables) {
 					if (variableName.equals(name.toString())) {
-						System.out.println("equals");
+						// System.out.println("equals");
 						threadClassFields.add(vdecl);
 					}
 				}
