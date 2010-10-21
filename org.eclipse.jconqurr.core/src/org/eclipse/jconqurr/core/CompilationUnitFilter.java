@@ -10,6 +10,7 @@ import org.eclipse.jconqurr.core.ast.visitors.MethodVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.TypeDeclarationVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IAnnotationBinding;
+import org.eclipse.jdt.core.dom.IExtendedModifier;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -81,6 +82,7 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 	/**
 	 * @see ICompilationUnitFilter#filter()
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
 	public void filter() {
 		if (compilationUnit == null)
@@ -142,11 +144,21 @@ public class CompilationUnitFilter implements ICompilationUnitFilter {
 							} else {
 								listOfMethodsAndConstructors.add(method);
 							}
-						}
-					}
+							// removes the annotation from the method 
+							List<IExtendedModifier> modifiers = (List<IExtendedModifier>)method.modifiers();
+							for(int j=0; j< modifiers.size(); j++) {
+								IExtendedModifier mod = modifiers.get(j);
+								if(mod.isAnnotation()) {
+									modifiers.remove(mod);
+									break;
+								}
+							}
+						} //end if(ab[i]!=null)
+					}  //end for loop
 				} else {
 					listOfMethodsAndConstructors.add(method);
-				}
+				}	//end if(ab.length > 0)
+				// Remove methods inside any inner classes from previous processing
 				for (int i = 0; i < listOfMethodsAndConstructors.size(); i++) {
 					if (otherInnerclasses.contains(listOfMethodsAndConstructors
 							.get(i).getParent())) {

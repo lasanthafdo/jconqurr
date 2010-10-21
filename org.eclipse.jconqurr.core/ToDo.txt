@@ -1,0 +1,6 @@
+ToDo List.
+
+Write a library for utility functions. Following features are needed.
+
+	*. Conversion of a simple name or string to proper case. -> Done
+	*. Copying of statement(s)/ Moving of statement(s)
