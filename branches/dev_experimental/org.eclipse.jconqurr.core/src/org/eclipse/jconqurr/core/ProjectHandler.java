@@ -23,7 +23,7 @@ public class ProjectHandler implements IProjectHandler {
 			if (fragment.getKind() == IPackageFragmentRoot.K_SOURCE) {
 				ICompilationUnitHandler cuHandler = new CompilationUnitHandler();
 				for (ICompilationUnit unit : fragment.getCompilationUnits()) {
-					cuHandler.setCompilationUnit(unit);
+					cuHandler.setCompilationUnit(unit, parallelProject);
 					cuHandler.convertToParallel();
 				}
 			}

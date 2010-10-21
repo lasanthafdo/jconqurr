@@ -29,7 +29,7 @@ public class SimpleRewriter extends JQRewriter {
 			document = textFileBuffer.getDocument();
 			edit = rewriter.rewriteAST(document, null);
 			undo = edit.apply(document);
-			textFileBuffer.commit(null, false);
+			textFileBuffer.commit(null, overwrite);
 		} catch (CoreException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

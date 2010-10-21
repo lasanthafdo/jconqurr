@@ -1,6 +1,7 @@
 package org.eclipse.jconqurr.core;
 
 import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaModelException;
 
 public interface ICompilationUnitHandler {
@@ -8,8 +9,10 @@ public interface ICompilationUnitHandler {
 	 * Sets the compilation unit to be processed
 	 * @param cu
 	 * 		the compilation unit to be analyzed for the conversion process
+	 * @param targetProject
+	 * 		the target project that will have the converted compilation unit
 	 */
-	public void setCompilationUnit(ICompilationUnit cu);
+	public void setCompilationUnit(ICompilationUnit cu, IJavaProject targetProject);
 	
 	/**
 	 * Converts the currently set compilation unit to parallel executable code.
