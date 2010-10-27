@@ -26,4 +26,11 @@ public interface ILoopHandler {
 	 * Processes the compilation unit and converts the code to parallel accordingly
 	 */
 	public void processCompilationUnit();
+	
+	/**
+	 * Sets the original bounds of the loop
+	 * @param lb
+	 * @param ub
+	 */
+	public void setOriginalBounds(int lb,int ub);
 }
