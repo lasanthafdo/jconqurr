@@ -1,6 +1,8 @@
 package org.eclipse.jconqurr.core.gpu;
 
-import java.io.*;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 

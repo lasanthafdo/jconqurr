@@ -70,6 +70,7 @@ public class LoopHandler implements ILoopHandler {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void processCompilationUnit() {
+		// create the service objects necessary for modification
 		ILoopAssist loopAssist = new LoopAssist();
 		AST ast = cu.getAST();
 		TypeDeclaration typeDecl = null;
@@ -88,111 +89,125 @@ public class LoopHandler implements ILoopHandler {
 				break;
 			}
 		}
+		
 		List<BodyDeclaration> bodyDeclList = typeDecl.bodyDeclarations();
-
 		// for each method declaration in the compilation unit
 		for (MethodDeclaration methodDecl : cuFilter
 				.getAnnotatedParallelForMethods()) {
 			Block methodBlock = methodDecl.getBody();
-			// create the necessary method invocation parameters and send them
-			// as a list
-			NumberLiteral nThreads = ast.newNumberLiteral(String
-					.valueOf(numThreads));
-			List<Expression> params = new ArrayList<Expression>();
-			params.add(nThreads);
-			// Get the help of a NodeAssist object to get standard assignment
-			// expression
-			Assignment assgnExpression = loopAssist.getStandardAssignment(ast,
-					"executorService", "ExecutorService", "newFixedThreadPool",
-					"Executors", params);
-			Statement assgnStmt = ast.newExpressionStatement(assgnExpression);
-			methodBlock.statements().add(0, assgnStmt);
 
 			ForLoopVisitor flVisitor = new ForLoopVisitor();
-			methodDecl.accept(flVisitor);
-			String innerClassName = "JQ"
-					+ StringUtils.toProperCase(methodDecl.getName().toString())
-					+ "LoopRunnable";
-			String mcInstanceName = typeDecl.getName().toString().substring(0,
-					1).toLowerCase()
-					+ typeDecl.getName().toString().substring(1) + "Obj";
+			methodDecl.accept(flVisitor);			// visit the method and get all the for loops
 
-			ClassInstanceCreation mainClassInstantiation = ast
-					.newClassInstanceCreation();
-			mainClassInstantiation.setType(ast.newSimpleType(ast
-					.newName(typeDecl.getName().toString())));
-			VariableDeclarationFragment mcInstanceFragment = ast
-					.newVariableDeclarationFragment();
-			mcInstanceFragment.setInitializer(mainClassInstantiation);
-			mcInstanceFragment.setName(ast.newSimpleName(mcInstanceName));
-			VariableDeclarationStatement mcInstanceDecl = ast
-					.newVariableDeclarationStatement(mcInstanceFragment);
-			mcInstanceDecl.setType(ast.newSimpleType(ast.newName(typeDecl
-					.getName().toString())));
-			methodBlock.statements().add(1, mcInstanceDecl);
-
-			ArrayCreation runnableArray = ast.newArrayCreation();
-			ArrayType arrayType = ast.newArrayType(ast.newSimpleType(ast
-					.newSimpleName(innerClassName)), 1);
-			runnableArray.setType(arrayType);
-			runnableArray.dimensions().add(
-					ast.newNumberLiteral(String.valueOf(numThreads)));
-			VariableDeclarationFragment runnableArrayVdf = ast
-					.newVariableDeclarationFragment();
-			runnableArrayVdf.setInitializer(runnableArray);
-			runnableArrayVdf.setName(ast.newSimpleName("runnableObj"));
-
-			VariableDeclarationStatement runnableArrayDecl = ast
-					.newVariableDeclarationStatement(runnableArrayVdf);
-			runnableArrayDecl.setType(ast.newArrayType(ast.newQualifiedType(ast
-					.newSimpleType(ast.newSimpleName(typeDecl.getName()
-							.toString())), ast.newSimpleName(innerClassName)),
-					1));
-			methodBlock.statements().add(2, runnableArrayDecl);
-
-			for (ForStatement forStmt : flVisitor.getForLoops()) {
+			for (ForStatement forStmt : flVisitor.getForLoops()) {			// for each for loop in the current method
 				int forStmtIndex = methodBlock.statements().indexOf(forStmt);
 				Statement stmtAboveFor = (Statement) methodBlock.statements()
 						.get(forStmtIndex - 1);
 				if (stmtAboveFor.getNodeType() == ASTNode.EXPRESSION_STATEMENT
 						&& ((ExpressionStatement) stmtAboveFor).getExpression()
 								.getNodeType() == ASTNode.METHOD_INVOCATION) {
-
 					MethodInvocation candidateDirectiveStmt = (MethodInvocation) ((ExpressionStatement) stmtAboveFor)
-							.getExpression();
+							.getExpression();		// get the statement above the for statement as a candidate for a directive
 
 					if (candidateDirectiveStmt.getExpression().toString()
 							.equals("Directives")
 							&& candidateDirectiveStmt.getName().getIdentifier()
-									.equals("forLoop")) {
+									.equals("forLoop")) {			// if it is a for loop directive
 						// TODO:name should be unique for each 'for' loop
+						String innerClassName = "JQ"
+								+ StringUtils.toProperCase(methodDecl.getName()
+										.toString()) + "LoopRunnable";
 						TypeDeclaration threadClass = loopAssist
 								.getRunnableInnerClassFor(ast, innerClassName,
 										forStmt, this);
 						bodyDeclList.add(threadClass);
+						// create the necessary method invocation parameters and
+						// send them as a list
+						NumberLiteral nThreads = ast.newNumberLiteral(String
+								.valueOf(numThreads));
+						List<Expression> params = new ArrayList<Expression>();
+						params.add(nThreads);
+						// Get the help of a NodeAssist object to get standard
+						// assignment expression
+						Assignment assgnExpression = loopAssist
+								.getStandardAssignment(ast, "executorService",
+										"ExecutorService",
+										"newFixedThreadPool", "Executors",
+										params);
+						Statement assgnStmt = ast
+								.newExpressionStatement(assgnExpression);
+						methodBlock.statements().add(forStmtIndex++, assgnStmt);
+
+						String mcInstanceName = typeDecl.getName().toString().substring(0, 1).toLowerCase()
+						+ typeDecl.getName().toString().substring(1) + "Obj";
+						ClassInstanceCreation mainClassInstantiation = ast
+								.newClassInstanceCreation();
+						mainClassInstantiation.setType(ast.newSimpleType(ast
+								.newName(typeDecl.getName().toString())));
+						VariableDeclarationFragment mcInstanceFragment = ast
+								.newVariableDeclarationFragment();
+						mcInstanceFragment
+								.setInitializer(mainClassInstantiation);
+						mcInstanceFragment.setName(ast
+								.newSimpleName(mcInstanceName));
+						VariableDeclarationStatement mcInstanceDecl = ast
+								.newVariableDeclarationStatement(mcInstanceFragment);
+						mcInstanceDecl.setType(ast.newSimpleType(ast
+								.newName(typeDecl.getName().toString())));
+						// adds a statement of the form
+						// '<Class> <ClassNameInCamel>Obj = new <Class>();'
+						methodBlock.statements().add(forStmtIndex++, mcInstanceDecl);
+
+						ArrayCreation runnableArray = ast.newArrayCreation();
+						ArrayType arrayType = ast.newArrayType(ast
+								.newSimpleType(ast
+										.newSimpleName(innerClassName)), 1);
+						runnableArray.setType(arrayType);
+						runnableArray.dimensions().add(
+								ast.newNumberLiteral(String.valueOf(numThreads)));
+						VariableDeclarationFragment runnableArrayVdf = ast
+								.newVariableDeclarationFragment();
+						runnableArrayVdf.setInitializer(runnableArray);
+						runnableArrayVdf.setName(ast
+								.newSimpleName("runnableObj"));
+						VariableDeclarationStatement runnableArrayDecl = ast
+								.newVariableDeclarationStatement(runnableArrayVdf);
+						runnableArrayDecl.setType(ast.newArrayType(ast
+								.newQualifiedType(ast.newSimpleType(ast
+										.newSimpleName(typeDecl.getName()
+												.toString())), ast
+										.newSimpleName(innerClassName)), 1));
+						// adds a statment of the form
+						// '<Class>.<InnerRunnableClass>[] runnableObj = new <InnerRunnableClass>[<noOfThreads>];' 
+						methodBlock.statements().add(forStmtIndex++, runnableArrayDecl);
+
+						ForStatement threadInitForLoop = loopAssist
+								.getStandardForStatement(ast, 0, numThreads, 1);
+						Block threadInitForBlock = loopAssist
+								.getGenericThreadInitializationBlock(ast,
+										threadInitForLoop, innerClassName,
+										mcInstanceName, originalLowerBound,
+										originalUpperBound, numThreads);
+						threadInitForLoop.setBody(threadInitForBlock);
+						// adds the new for loop at the appropriate place
+						methodBlock.statements().add(forStmtIndex++, threadInitForLoop);
+
+						MethodInvocation miShutdownExecutor = ast
+								.newMethodInvocation();
+						miShutdownExecutor.setExpression(ast
+								.newSimpleName("executorService"));
+						miShutdownExecutor.setName(ast
+								.newSimpleName("shutdown"));
+						// adds the statement 'executorService.shutdown();'
+						methodBlock.statements().add(forStmtIndex,
+								ast.newExpressionStatement(miShutdownExecutor));
+
+						// delete the old for loop and the directive statement
 						cleanUpCode(forStmt, stmtAboveFor);
 					} // end if(MethodInvocation is 'Directives.forLoop')
 				} // end if(Statement is a MethodInvocation)
 			} // end of inner for loop (for..each ForStatement in
-			// flVisitor.getForLoops())
-
-			ForStatement threadInitForLoop = loopAssist
-					.getStandardForStatement(ast, 0, numThreads, 1);
-			Block threadInitForBlock = loopAssist
-					.getGenericThreadInitializationBlock(ast,
-							threadInitForLoop, innerClassName, mcInstanceName,
-							originalLowerBound, originalUpperBound, numThreads);
-			threadInitForLoop.setBody(threadInitForBlock);
-			methodBlock.statements().add(threadInitForLoop);
-
-			MethodInvocation miShutdownExecutor = ast.newMethodInvocation();
-			miShutdownExecutor.setExpression(ast
-					.newSimpleName("executorService"));
-			miShutdownExecutor.setName(ast.newSimpleName("shutdown"));
-			methodBlock.statements().add(
-					ast.newExpressionStatement(miShutdownExecutor));
 		} // end of outer for loop (for...each MethodDeclaration in
-		// cuFilter.getAnnotatedMethods())
 	}
 
 	private void cleanUpCode(ForStatement forStmt, Statement directiveStmt) {
