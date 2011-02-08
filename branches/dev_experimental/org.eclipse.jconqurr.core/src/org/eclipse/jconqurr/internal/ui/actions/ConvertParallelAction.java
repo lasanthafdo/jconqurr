@@ -2,7 +2,7 @@
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.jconqurr.core.HandleProjectParallelism;
+import org.eclipse.jconqurr.core.ProjectParallelConverter;
 import org.eclipse.jconqurr.core.IHandleProjectParallelism;
 import org.eclipse.jconqurr.core.build.BuildJconqurrProj;
 import org.eclipse.jconqurr.core.build.IBuildJconqurrProjManager;
@@ -52,7 +52,7 @@ public class ConvertParallelAction extends ActionDelegate {
 				IBuildJconqurrProjManager projBuilderManager = new BuildJconqurrProj();
 				IJavaProject parallelProject = projBuilderManager
 						.createProject(selectedProject);
-				IHandleProjectParallelism handler = new HandleProjectParallelism();
+				IHandleProjectParallelism handler = new ProjectParallelConverter();
 				handler.handleProject(parallelProject, selectedProject);
 			} catch (CoreException e) {
 				e.printStackTrace();
