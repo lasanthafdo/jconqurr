@@ -47,7 +47,7 @@ import org.eclipse.text.edits.MalformedTreeException;
 import org.eclipse.text.edits.TextEdit;
 import org.osgi.framework.Bundle;
 
-public class HandleProjectParallelism implements IHandleProjectParallelism {
+public class ProjectParallelConverter implements IHandleProjectParallelism {
 	private String classNameDeclaration;
 	private String className;
 	private String imports;
@@ -69,7 +69,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 	}
 
 	/**
-	 * @see HandleProjectParallelism#convert(IJavaProject, ICompilationUnit)
+	 * @see ProjectParallelConverter#convert(IJavaProject, ICompilationUnit)
 	 */
 	public void convert(IJavaProject parallel, ICompilationUnit unit) {
 		ForLoop.lockNo = 1;
@@ -197,7 +197,7 @@ public class HandleProjectParallelism implements IHandleProjectParallelism {
 	}
 
 	/**
-	 * @see HandleProjectParallelism#handleProject(IJavaProject, IJavaProject)
+	 * @see ProjectParallelConverter#handleProject(IJavaProject, IJavaProject)
 	 */
 	public void handleProject(IJavaProject parallel, IJavaProject sequential)
 			throws JavaModelException {

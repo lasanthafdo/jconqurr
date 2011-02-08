@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.jconqurr.core.HandleProjectParallelism;
+import org.eclipse.jconqurr.core.ProjectParallelConverter;
 import org.eclipse.jconqurr.core.ast.visitors.AssignmentVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.BlockVisitor;
 import org.eclipse.jconqurr.core.ast.visitors.ExpressionStatementVisitor;
@@ -279,10 +279,10 @@ public class GPUHandler implements IGPUHandler {
 
 	private void writeToCUFile(ForStatement s) {
 		FileOutputStream fout;
-		System.out.println(HandleProjectParallelism.getSrcPath());
+		System.out.println(ProjectParallelConverter.getSrcPath());
 		String cuFile = getCuDeclaration() + getCuFileBody();
 		try {
-			String path = HandleProjectParallelism.getSrcPath()
+			String path = ProjectParallelConverter.getSrcPath()
 					+ IPath.SEPARATOR + "simple.cu";
 			fout = new FileOutputStream(path);
 			System.out.println(path);
